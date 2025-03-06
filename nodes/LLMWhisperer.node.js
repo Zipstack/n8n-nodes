@@ -30,7 +30,16 @@ class LLMWhisperer {
                     required: true,
                 },
             ],
+            inputDataType: ['binary'],
             properties: [
+                {
+                    displayName: 'File contents',
+                    name: 'file_contents',
+                    type: 'string',
+                    default: 'data',
+                    description: 'The file contents to be processed',
+                    required: true,
+                },
                 {
                     displayName: 'LLMWhisperer Host',
                     name: 'host',
@@ -83,7 +92,7 @@ class LLMWhisperer {
                     description: 'The output format of the extracted text',
                     required: true,
                 },
-                                {
+                {
                     displayName: 'Timeout',
                     name: 'timeout',
                     type: 'number',
@@ -182,6 +191,20 @@ class LLMWhisperer {
             const apiKey = credentials.apiKey;
 
             for (let i = 0; i < items.length; i++) {
+                const fileContents = this.getNodeParameter('file_contents', i);
+                
+                // Check if the binary data property exists
+                if (!items[i].binary?.[fileContents]) {
+                    throw new NodeOperationError(
+                        this.getNode(),
+                        `No binary data property "${fileContents}" exists on input`
+                    );
+                }
+
+                // Get the binary data
+                const binaryData = items[i].binary[fileContents];
+                const fileBuffer = Buffer.from(binaryData.data, 'base64');
+                
                 const host = this.getNodeParameter('host', i);
                 const mode = this.getNodeParameter('mode', i);
                 const outputMode = this.getNodeParameter('output_mode', i);
@@ -196,12 +219,22 @@ class LLMWhisperer {
                 const fileName = this.getNodeParameter('file_name', i);
                 const addLineNumbers = this.getNodeParameter('add_line_nos', i);
                 const timeout = this.getNodeParameter('timeout', i);
-                
+
+                // // Prepare API request parameters
+                // const requestOptions = {
+                //     method: 'POST',
+                //     headers: {
+                //         'Authorization': `Bearer ${apiKey}`,
+                //         'Content-Type': binaryData.mimeType,
+                //     },
+                //     body: fileBuffer,
+                //     timeout: timeout * 1000, // Convert seconds to milliseconds
+                // };
+
                 const result = {
-                    host,
-                    mode,
-                    outputMode,
-                    apiKey // Include API key in result for debugging (you may want to remove this in production)
+                    fileName: binaryData.fileName,
+                    mimeType: binaryData.mimeType,
+                    size: binaryData.fileSize,
                 };
 
                 returnData.push({

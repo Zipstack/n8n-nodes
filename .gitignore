@@ -32,7 +32,6 @@ credentials.json
 
 # Test coverage
 coverage/
-
 # Temporary files
 *.tmp
 *.temp
