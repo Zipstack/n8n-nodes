@@ -9,6 +9,10 @@ const {
 } = require('n8n-workflow');
 
 const { NodeOperationError } = require('n8n-workflow');
+const { log } = require('n8n-workflow/dist/LoggerProxy.js');
+
+// Helper function for sleep
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class LLMWhisperer {
     constructor() {
@@ -44,7 +48,7 @@ class LLMWhisperer {
                     displayName: 'LLMWhisperer Host',
                     name: 'host',
                     type: 'string',
-                    default: 'https://llmwhisperer-api.unstract.com',
+                    default: 'https://llmwhisperer-api.us-central.unstract.com',
                     description: 'Host URL for the LLMWhisperer API',
                     required: true,
                 },
@@ -190,9 +194,13 @@ class LLMWhisperer {
             const credentials = await this.getCredentials('llmWhispererApi');
             const apiKey = credentials.apiKey;
 
+            // Get helper functions
+            const { helpers, logger } = this;
+
             for (let i = 0; i < items.length; i++) {
                 const fileContents = this.getNodeParameter('file_contents', i);
                 
+               
                 // Check if the binary data property exists
                 if (!items[i].binary?.[fileContents]) {
                     throw new NodeOperationError(
@@ -220,25 +228,84 @@ class LLMWhisperer {
                 const addLineNumbers = this.getNodeParameter('add_line_nos', i);
                 const timeout = this.getNodeParameter('timeout', i);
 
-                // // Prepare API request parameters
-                // const requestOptions = {
-                //     method: 'POST',
-                //     headers: {
-                //         'Authorization': `Bearer ${apiKey}`,
-                //         'Content-Type': binaryData.mimeType,
-                //     },
-                //     body: fileBuffer,
-                //     timeout: timeout * 1000, // Convert seconds to milliseconds
-                // };
-
-                const result = {
-                    fileName: binaryData.fileName,
-                    mimeType: binaryData.mimeType,
-                    size: binaryData.fileSize,
+                // Prepare API request parameters
+                const requestOptions = {
+                    method: 'POST',
+                    url: `${host}/api/v2/whisper`,
+                    headers: {
+                        'unstract-key': `${apiKey}`,                         
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: fileBuffer,
+                    timeout: 120 * 1000,
+                    qs: {
+                        mode: mode,
+                        output_mode: outputMode,
+                        page_seperator: pageSeparator,
+                        pages_to_extract: pagesToExtract,
+                        line_splitter_tolerance: lineSplitterTolerance,
+                        line_splitter_strategy: lineSplitterStrategy,
+                        horizontal_stretch_factor: horizontalStretchFactor,
+                        mark_vertical_lines: markVerticalLines,
+                        mark_horizontal_lines: markHorizontalLines,
+                        tag: tag,
+                        file_name: fileName,
+                        add_line_nos: addLineNumbers
+                    },
+                    accept: 'application/json',
                 };
 
+                // Make the API request
+                const result = await helpers.request(requestOptions);
+                if (result.status && result.status != 202) {
+                    throw new NodeOperationError(this.getNode(), result.body);
+                }
+                
+                //Poll the status API endpoint by calling whisper-status endpoint
+                
+                //Convert result to JSON
+                const resultContent = JSON.parse(result)
+                let whisper_hash = resultContent['whisper_hash']
+                let status = 'processing';
+                const t1 = Date.now();
+                while (status !== 'processed') {
+                    await sleep(2000);                    
+                    const result = await helpers.request({
+                        method: 'GET',
+                        url: `${host}/api/v2/whisper-status`,
+                        headers: {
+                            'unstract-key': `${apiKey}`,                            
+                        },
+                        qs: {
+                            whisper_hash: whisper_hash
+                        }
+                    });
+                    const resultContentX = JSON.parse(result)
+                    status = resultContentX['status'];                    
+                    const t2 = Date.now()
+                    if ((t2 - t1) / 1000 > timeout) {
+                        throw new NodeOperationError(
+                            this.getNode(),
+                            `Operation timed out after ${timeout} seconds`
+                        );
+                    }
+                }
+                // Retrieve the extraction using the whisper-retrieve endpoint
+                const retrieveResult = await helpers.request({
+                    method: 'GET',
+                    url: `${host}/api/v2/whisper-retrieve`,
+                    headers: {
+                        'unstract-key': `${apiKey}`,                            
+                    },
+                    qs: {
+                        whisper_hash: whisper_hash
+                    }
+                });
+                const retrieveResultContent = JSON.parse(retrieveResult)
+                delete retrieveResultContent.metadata
+                delete retrieveResultContent.webhook_metadata
                 returnData.push({
-                    json: result,
+                    json: retrieveResultContent,
                 });
             }
 
