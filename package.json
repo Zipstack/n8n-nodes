@@ -1,0 +1,32 @@
+{
+    "name": "n8n-llmwhisperer-node",
+    "version": "1.0.0",
+    "description": "Convert your documents to layout preserved plain text using LLMWhisperer",
+    "main": "index.js",
+    "scripts": {
+        "test": "jest"
+    },
+    "dependencies": {
+        "n8n-core": "^0.142.0",
+        "n8n-workflow": "^0.142.0"
+    },
+    "devDependencies": {
+        "jest": "^29.0.0"
+    },
+    "keywords": [
+        "n8n",
+        "n8n-node",
+        "n8n-community-node-package"
+    ],
+    "n8n": {
+        "n8nNodesApiVersion": 1,
+        "nodes": [
+            "nodes/LLMWhisperer.node.js"
+        ],
+        "credentials": [
+            "credentials/LLMWhispererApi.credentials.js"
+        ]
+    },
+    "author": "",
+    "license": "ISC"
+}
