@@ -152,13 +152,14 @@ class Unstract {
                 let resultContent = JSON.parse(result);
                 resultContent = resultContent["message"]
                 logger.error(`Result: ${JSON.stringify(resultContent)}`)
-                let execution_status = resultContent['execution_status'];                
+                let execution_status = resultContent['execution_status'];   
+                let execution_id = '';             
                 if (execution_status === 'PENDING') {
                     let t1 = new Date();
                     while (execution_status !== 'COMPLETED') {
                         await sleep(2000);       
                         let status_api = resultContent['status_api'];
-                        let execution_id = status_api.split('execution_id=')[1];
+                        execution_id = status_api.split('execution_id=')[1];
                         logger.error(`Execution Id: ${execution_id}`)
                         const requestOptions = {
                             method: 'GET',
@@ -190,23 +191,11 @@ class Unstract {
                         if (execution_status === 'ERROR') {
                             throw new NodeOperationError(this.getNode(), `Error: ${resultContent['error']}`);
                         }
+                        if (execution_status === 'COMPLETED') {
+                            resultContent = resultContent["message"]
+                        }
                     }
                 }
-
-                //Get the final result
-                const requestOptionsFinal = {
-                    method: 'GET',
-                    url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    qs: {
-                        execution_id : execution_id
-                    },
-                    timeout: 5 * 60 * 1000,
-                };  
-                const resultFinal = await helpers.request(requestOptionsFinal);
-                resultContent = JSON.parse(resultFinal);
 
                 returnData.push({
                     json: resultContent,
