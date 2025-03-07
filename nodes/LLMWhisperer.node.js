@@ -1,15 +1,7 @@
 // This file will contain the implementation of the custom n8n node.
 // Functionality will be added later.
 
-const { IExecuteFunctions } = require('n8n-core');
-const {
-    INodeExecutionData,
-    INodeType,
-    INodeTypeDescription,
-} = require('n8n-workflow');
-
 const { NodeOperationError } = require('n8n-workflow');
-const { log } = require('n8n-workflow/dist/LoggerProxy.js');
 
 // Helper function for sleep
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -59,20 +51,20 @@ class LLMWhisperer {
                     options: [
                         {
                             name: 'Form',
-                            value: 'form'
+                            value: 'form',
                         },
                         {
                             name: 'High Quality',
-                            value: 'high_quality'
+                            value: 'high_quality',
                         },
                         {
                             name: 'Low Cost',
-                            value: 'low_cost'
+                            value: 'low_cost',
                         },
                         {
                             name: 'Native Text',
-                            value: 'native_text'
-                        }
+                            value: 'native_text',
+                        },
                     ],
                     default: 'form',
                     description: 'The mode to use for text extraction',
@@ -85,12 +77,12 @@ class LLMWhisperer {
                     options: [
                         {
                             name: 'Layout Preserving',
-                            value: 'layout_preserving'
+                            value: 'layout_preserving',
                         },
                         {
                             name: 'Text',
-                            value: 'text'
-                        }
+                            value: 'text',
+                        },
                     ],
                     default: 'layout_preserving',
                     description: 'The output format of the extracted text',
@@ -123,7 +115,7 @@ class LLMWhisperer {
                     type: 'number',
                     typeOptions: {
                         minValue: 0,
-                        maxValue: 1
+                        maxValue: 1,
                     },
                     default: 0.4,
                     description: 'Factor to decide when to move text to the next line (40% of average character height)',
@@ -176,7 +168,7 @@ class LLMWhisperer {
                     type: 'boolean',
                     default: false,
                     description: 'Adds line numbers to extracted text and saves line metadata for highlights API',
-                }
+                },
             ],
         };
     }
@@ -199,20 +191,19 @@ class LLMWhisperer {
 
             for (let i = 0; i < items.length; i++) {
                 const fileContents = this.getNodeParameter('file_contents', i);
-                
-               
+
                 // Check if the binary data property exists
                 if (!items[i].binary?.[fileContents]) {
                     throw new NodeOperationError(
                         this.getNode(),
-                        `No binary data property "${fileContents}" exists on input`
+                        `No binary data property "${fileContents}" exists on input`,
                     );
                 }
 
                 // Get the binary data
                 const binaryData = items[i].binary[fileContents];
                 const fileBuffer = Buffer.from(binaryData.data, 'base64');
-                
+
                 const host = this.getNodeParameter('host', i);
                 const mode = this.getNodeParameter('mode', i);
                 const outputMode = this.getNodeParameter('output_mode', i);
@@ -233,7 +224,7 @@ class LLMWhisperer {
                     method: 'POST',
                     url: `${host}/api/v2/whisper`,
                     headers: {
-                        'unstract-key': `${apiKey}`,                         
+                        'unstract-key': `${apiKey}`,
                         'Content-Type': 'application/octet-stream',
                     },
                     body: fileBuffer,
@@ -250,43 +241,44 @@ class LLMWhisperer {
                         mark_horizontal_lines: markHorizontalLines,
                         tag: tag,
                         file_name: fileName,
-                        add_line_nos: addLineNumbers
+                        add_line_nos: addLineNumbers,
                     },
                     accept: 'application/json',
                 };
 
                 // Make the API request
+                logger.info('Making API request to LLMWhisperer API...');
                 const result = await helpers.request(requestOptions);
                 if (result.status && result.status != 202) {
                     throw new NodeOperationError(this.getNode(), result.body);
                 }
-                
+
                 //Poll the status API endpoint by calling whisper-status endpoint
-                
+
                 //Convert result to JSON
-                const resultContent = JSON.parse(result)
-                let whisper_hash = resultContent['whisper_hash']
+                const resultContent = JSON.parse(result);
+                let whisper_hash = resultContent['whisper_hash'];
                 let status = 'processing';
                 const t1 = Date.now();
                 while (status !== 'processed') {
-                    await sleep(2000);                    
+                    await sleep(2000);
                     const result = await helpers.request({
                         method: 'GET',
                         url: `${host}/api/v2/whisper-status`,
                         headers: {
-                            'unstract-key': `${apiKey}`,                            
+                            'unstract-key': `${apiKey}`,
                         },
                         qs: {
-                            whisper_hash: whisper_hash
-                        }
+                            whisper_hash: whisper_hash,
+                        },
                     });
-                    const resultContentX = JSON.parse(result)
-                    status = resultContentX['status'];                    
-                    const t2 = Date.now()
+                    const resultContentX = JSON.parse(result);
+                    status = resultContentX['status'];
+                    const t2 = Date.now();
                     if ((t2 - t1) / 1000 > timeout) {
                         throw new NodeOperationError(
                             this.getNode(),
-                            `Operation timed out after ${timeout} seconds`
+                            `Operation timed out after ${timeout} seconds`,
                         );
                     }
                 }
@@ -295,15 +287,15 @@ class LLMWhisperer {
                     method: 'GET',
                     url: `${host}/api/v2/whisper-retrieve`,
                     headers: {
-                        'unstract-key': `${apiKey}`,                            
+                        'unstract-key': `${apiKey}`,
                     },
                     qs: {
-                        whisper_hash: whisper_hash
-                    }
+                        whisper_hash: whisper_hash,
+                    },
                 });
-                const retrieveResultContent = JSON.parse(retrieveResult)
-                delete retrieveResultContent.metadata
-                delete retrieveResultContent.webhook_metadata
+                const retrieveResultContent = JSON.parse(retrieveResult);
+                delete retrieveResultContent.metadata;
+                delete retrieveResultContent.webhook_metadata;
                 returnData.push({
                     json: retrieveResultContent,
                 });

@@ -1,5 +1,4 @@
 const { NodeOperationError } = require('n8n-workflow');
-const { log } = require('n8n-workflow/dist/LoggerProxy.js');
 
 // Helper function for sleep
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -98,22 +97,22 @@ class Unstract {
 
             for (let i = 0; i < items.length; i++) {
                 const binaryPropertyName = this.getNodeParameter('file_contents', i);
-                
+
                 // Check if the binary data property exists
                 if (!items[i].binary?.[binaryPropertyName]) {
                     throw new NodeOperationError(
                         this.getNode(),
-                        `No binary data property "${binaryPropertyName}" exists on input`
+                        `No binary data property "${binaryPropertyName}" exists on input`,
                     );
                 }
 
                 // Get the binary data
                 const binaryData = items[i].binary[binaryPropertyName];
                 const fileBuffer = Buffer.from(binaryData.data, 'base64');
-                
+
                 const timeout = this.getNodeParameter('timeout', i);
                 const deploymentName = this.getNodeParameter('deployment_name', i);
-                const host = this.getNodeParameter('host',i)
+                const host = this.getNodeParameter('host',i);
                 const includeMetrics = this.getNodeParameter('include_metrics', i);
                 const includeMetadata = this.getNodeParameter('include_metadata', i);
                 const tags = this.getNodeParameter('tags', i);
@@ -148,34 +147,33 @@ class Unstract {
                 };
 
                 // Make the API request
+                logger.info('Making API request to Unstract API...');
                 const result = await helpers.request(requestOptions);
                 let resultContent = JSON.parse(result);
-                resultContent = resultContent["message"]
-                logger.error(`Result: ${JSON.stringify(resultContent)}`)
-                let execution_status = resultContent['execution_status'];   
-                let execution_id = '';             
+                resultContent = resultContent['message'];
+                let execution_status = resultContent['execution_status'];
+                let execution_id = '';
                 if (execution_status === 'PENDING') {
                     let t1 = new Date();
                     while (execution_status !== 'COMPLETED') {
-                        await sleep(2000);       
+                        await sleep(2000);
                         let status_api = resultContent['status_api'];
                         execution_id = status_api.split('execution_id=')[1];
-                        logger.error(`Execution Id: ${execution_id}`)
                         const requestOptions = {
                             method: 'GET',
                             url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
                             headers: {
-                                'Authorization': `Bearer ${apiKey}`
+                                'Authorization': `Bearer ${apiKey}`,
                             },
                             qs: {
-                                execution_id : execution_id
+                                execution_id : execution_id,
                             },
                             timeout: 5 * 60 * 1000,
-                        };  
+                        };
                         try {
                             const result = await helpers.request(requestOptions);
                             resultContent = JSON.parse(result);
-                            execution_status = resultContent['status']
+                            execution_status = resultContent['status'];
                         } catch (error) {
                             // Check if HTTP code is 400
                             if (error.response && error.response.statusCode === 400) {
@@ -183,8 +181,6 @@ class Unstract {
                             }
                         }
                         let t2 = new Date();
-                        logger.error(`Time: ${(t2-t1)/1000} seconds`)
-                        logger.error(`Status: ${execution_status}`)
                         if ((t2-t1)/1000 > timeout) {
                             throw new NodeOperationError(this.getNode(), `Timeout reached: ${timeout} seconds`);
                         }
@@ -192,7 +188,7 @@ class Unstract {
                             throw new NodeOperationError(this.getNode(), `Error: ${resultContent['error']}`);
                         }
                         if (execution_status === 'COMPLETED') {
-                            resultContent = resultContent["message"]
+                            resultContent = resultContent['message'];
                         }
                     }
                 }

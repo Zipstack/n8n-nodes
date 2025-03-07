@@ -3,7 +3,7 @@ class UnstractApi {
         this.name = 'unstractApi';
         this.displayName = 'Unstract API';
         this.documentationUrl = 'https://docs.unstract.com/unstract/index.html';
-		this.icon = 'file:llmWhisperer.svg';
+        this.icon = 'file:llmWhisperer.svg';
         this.properties = [
             {
                 displayName: 'API Key',
