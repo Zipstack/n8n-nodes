@@ -53,7 +53,7 @@ class Unstract {
                     displayName: 'Timeout',
                     name: 'timeout',
                     type: 'number',
-                    default: 3,
+                    default: 600,
                     description: 'Maximum time in seconds to wait for processing',
                     required: true,
                 },
