@@ -152,21 +152,16 @@ class Unstract {
                 let resultContent = JSON.parse(result);
                 resultContent = resultContent['message'];
                 let execution_status = resultContent['execution_status'];
-                let execution_id = '';
                 if (execution_status === 'PENDING') {
                     let t1 = new Date();
+                    const status_api = resultContent['status_api'];
                     while (execution_status !== 'COMPLETED') {
                         await sleep(2000);
-                        let status_api = resultContent['status_api'];
-                        execution_id = status_api.split('execution_id=')[1];
                         const requestOptions = {
                             method: 'GET',
-                            url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
+                            url: `${host}${status_api}`,
                             headers: {
                                 'Authorization': `Bearer ${apiKey}`,
-                            },
-                            qs: {
-                                execution_id : execution_id,
                             },
                             timeout: 5 * 60 * 1000,
                         };
@@ -179,13 +174,17 @@ class Unstract {
                             if (error.response && error.response.statusCode === 400) {
                                 throw new NodeOperationError(this.getNode(), `Error: ${error}`);
                             }
+                            let json_response = error.message.split(' - ')[1];
+                            json_response = json_response.replace(/\\"/g, '"').slice(1, -1);
+                            resultContent = JSON.parse(json_response);
+                            execution_status = resultContent['status'];
                         }
                         let t2 = new Date();
                         if ((t2-t1)/1000 > timeout) {
                             throw new NodeOperationError(this.getNode(), `Timeout reached: ${timeout} seconds`);
                         }
                         if (execution_status === 'ERROR') {
-                            throw new NodeOperationError(this.getNode(), `Error: ${resultContent['error']}`);
+                            throw new NodeOperationError(this.getNode(), `Error: ${resultContent['message'][0]['error']}`);
                         }
                         if (execution_status === 'COMPLETED') {
                             resultContent = resultContent['message'];
