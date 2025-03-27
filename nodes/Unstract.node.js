@@ -78,6 +78,13 @@ class Unstract {
                     default: '',
                     description: 'Comma-separated tags to associate with the document',
                 },
+                {
+                    displayName: 'Use cached results',
+                    name: 'use_file_history',
+                    type: 'boolean',
+                    default: false,
+                    description: 'Whether to use cached results if available. Useful while debugging your n8n workflow',
+                },
             ],
         };
     }
@@ -116,6 +123,7 @@ class Unstract {
                 const includeMetrics = this.getNodeParameter('include_metrics', i);
                 const includeMetadata = this.getNodeParameter('include_metadata', i);
                 const tags = this.getNodeParameter('tags', i);
+                const useFileHistory = this.getNodeParameter('use_file_history', i);
 
                 // Create form data
                 const formData = {
@@ -129,6 +137,7 @@ class Unstract {
                     timeout: 1,
                     include_metrics: includeMetrics.toString(),
                     include_metadata: includeMetadata.toString(),
+                    use_file_history: useFileHistory.toString(),
                 };
 
                 if (tags) {
