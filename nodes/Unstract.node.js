@@ -161,7 +161,7 @@ class Unstract {
                 let resultContent = JSON.parse(result);
                 resultContent = resultContent['message'];
                 let execution_status = resultContent['execution_status'];
-                if (execution_status === 'PENDING') {
+                if (execution_status === 'PENDING' || execution_status === 'EXECUTING') {
                     let t1 = new Date();
                     const status_api = resultContent['status_api'];
                     while (execution_status !== 'COMPLETED') {
