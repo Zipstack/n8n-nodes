@@ -1,59 +1,62 @@
 {
-    "name": "n8n-nodes-unstract",
-    "version": "0.1.3",
-    "description": "n8n nodes for Unstract services including LLMWhisperer and Unstract API",
-    "keywords": [
-        "n8n-community-node-package",
-        "unstract",
-        "llmwhisperer",
-        "n8n",
-        "n8n-node",
-        "document-processing",
-        "text-extraction"
+  "name": "n8n-nodes-unstract",
+  "version": "0.2.0",
+  "description": "n8n nodes for Unstract services including LLMWhisperer and Unstract API",
+  "keywords": [
+    "n8n-community-node-package",
+    "unstract",
+    "llmwhisperer",
+    "n8n",
+    "n8n-node",
+    "document-processing",
+    "text-extraction"
+  ],
+  "engines": {
+    "node": ">=20.15"
+  },
+  "license": "MIT",
+  "homepage": "https://docs.unstract.com",
+  "author": {
+    "name": "Unstract",
+    "email": "support@unstract.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unstract/n8n-nodes.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "mkdir -p dist/nodes dist/credentials && cp nodes/* dist/nodes/ && cp credentials/* dist/credentials/",
+    "dev": "nodemon",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials",
+    "lintfix": "eslint nodes credentials --fix",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/LLMWhispererApi.credentials.js",
+      "dist/credentials/UnstractApi.credentials.js"
     ],
-    "license": "MIT",
-    "homepage": "https://docs.unstract.com",
-    "author": {
-        "name": "Unstract",
-        "email": "support@unstract.com"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/unstract/n8n-nodes.git"
-    },
-    "main": "index.js",
-    "scripts": {
-        "build": "mkdir -p dist/nodes dist/credentials && cp nodes/* dist/nodes/ && cp credentials/* dist/credentials/",
-        "dev": "nodemon",
-        "format": "prettier nodes credentials --write",
-        "lint": "eslint nodes credentials",
-        "lintfix": "eslint nodes credentials --fix",
-        "prepare": "npm run build",
-        "prepublishOnly": "npm run lint"
-    },
-    "files": [
-        "dist/**/*",
-        "README.md"
-    ],
-    "n8n": {
-        "n8nNodesApiVersion": 1,
-        "credentials": [
-            "dist/credentials/LLMWhispererApi.credentials.js",
-            "dist/credentials/UnstractApi.credentials.js"
-        ],
-        "nodes": [
-            "dist/nodes/LLMWhisperer.node.js",
-            "dist/nodes/Unstract.node.js"
-        ]
-    },
-    "devDependencies": {
-        "eslint": "^8.28.0",
-        "n8n-core": "^0.125.0",
-        "n8n-workflow": "^0.107.0",
-        "prettier": "^2.7.1"
-    },
-    "peerDependencies": {
-        "n8n-core": ">=0.125.0",
-        "n8n-workflow": ">=0.107.0"
-    }
+    "nodes": [
+      "dist/nodes/LLMWhisperer.node.js",
+      "dist/nodes/Unstract.node.js"
+    ]
+  },
+  "devDependencies": {
+    "eslint": "^8.28.0",
+    "n8n-core": "^0.125.0",
+    "n8n-workflow": "^0.107.0",
+    "prettier": "^2.7.1"
+  },
+  "peerDependencies": {
+    "n8n-core": ">=0.125.0",
+    "n8n-workflow": ">=0.107.0"
+  }
 }
