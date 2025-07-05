@@ -64,8 +64,8 @@ N8N_CUSTOM_EXTENSIONS="<your-path-to-n8n-custom-nodes>" npx n8n start
 Before using these nodes, you'll need:
 
 1. **API Credentials**: Get your API keys from:
-   - [LLMWhisperer API](https://docs.unstract.com/llmwhisperer/llm_whisperer/llm_whisperer_n8n_custom_node/)
-   - [Unstract Platform](https://docs.unstract.com/unstract/unstract_platform/api_deployment/unstract_api_deployment_n8n_custom_node/)
+   - [LLMWhisperer API - Follow the doc](https://docs.unstract.com/llmwhisperer/llm_whisperer/getting_started/llm_whisperer_registering/)
+   - [Unstract Platform - Follow the doc]([https://docs.unstract.com/unstract/unstract_platform/api_deployment/unstract_api_deployment_n8n_custom_node/](https://docs.unstract.com/unstract/unstract_platform/api_deployment/unstract_api_deployment_intro/))
 
 2. **Node.js**: Version 20 or above is required
 
