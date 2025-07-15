@@ -40,7 +40,7 @@ class UnstractHITLFetch {
                     name: 'hitl_queue_name',
                     type: 'string',
                     default: '',
-                    required: true,
+                    required: false,
                 },
             ],
         };
@@ -61,7 +61,10 @@ class UnstractHITLFetch {
             const workflowId = this.getNodeParameter('workflow_id', i);
             const hitlQueueName = this.getNodeParameter('hitl_queue_name', i);
 
-            const url = `${host}/mr/api/${orgId}/approved/result/${workflowId}/?hitl_queue_name=${encodeURIComponent(hitlQueueName)}`;
+            let url = `${host}/mr/api/${orgId}/approved/result/${workflowId}/`;
+            if (hitlQueueName && hitlQueueName.trim() !== '') {
+                url += `?hitl_queue_name=${encodeURIComponent(hitlQueueName)}`;
+            }
 
             const options = {
                 method: 'GET',
