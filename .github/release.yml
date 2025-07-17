@@ -1,0 +1,60 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - dependencies
+      - duplicate
+      - question
+      - invalid
+      - wontfix
+      - skip-changelog
+    authors:
+      - dependabot
+      - github-actions[bot]
+
+  categories:
+    - title: 🚀 New Features
+      labels:
+        - feature
+        - enhancement
+        - new-feature
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - bugfix
+        - fix
+    - title: 📚 Documentation
+      labels:
+        - documentation
+        - docs
+    - title: 🧹 Maintenance
+      labels:
+        - maintenance
+        - chore
+        - refactor
+        - cleanup
+    - title: ⚡ Performance
+      labels:
+        - performance
+        - optimization
+    - title: 🔧 Configuration
+      labels:
+        - config
+        - configuration
+        - settings
+    - title: 🧪 Testing
+      labels:
+        - test
+        - testing
+        - tests
+    - title: 🔒 Security
+      labels:
+        - security
+        - vulnerability
+    - title: 📦 Dependencies
+      labels:
+        - dependencies
+        - deps
+    - title: Other Changes
+      labels:
+        - "*"

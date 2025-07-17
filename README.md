@@ -204,7 +204,7 @@ N8N_CUSTOM_EXTENSIONS="/path/to/n8n-nodes" npx n8n start
 
 - **Documentation**: [docs.unstract.com](https://docs.unstract.com)
 - **Issues**: [GitHub Issues](https://github.com/Zipstack/n8n-nodes/issues)
-- **Community**: Join our community discussions
+- **Community**: [Join our community discussions](https://join.slack.com/t/unstract/shared_invite/zt-372jed537-bYz99iZnfXnhqyjbU8lPLg)
 - **Email**: support@unstract.com
 
 ## License
