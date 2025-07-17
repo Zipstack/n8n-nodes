@@ -34,9 +34,19 @@ jobs:
       contents: write
       id-token: write
     steps:
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.PUSH_TO_MAIN_APP_ID }}
+          private-key: ${{ secrets.PUSH_TO_MAIN_APP_PRIVATE_KEY }}
+          owner: Zipstack
+          repositories: |
+            n8n-nodes
+
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.generate-token.outputs.token }}
           fetch-depth: 0
 
       # Configure git for commits
@@ -93,7 +103,7 @@ jobs:
 
           echo "Created release v$NEW_VERSION"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       # Handle release event (extract version from existing release)
       - name: Extract version from release
