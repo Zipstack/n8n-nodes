@@ -89,19 +89,13 @@ jobs:
           git tag "v$NEW_VERSION"
           git push origin "v$NEW_VERSION"
 
-          # Prepare release notes
-          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
-          if [ -z "$RELEASE_NOTES" ]; then
-            RELEASE_NOTES="Release version $NEW_VERSION"
-          fi
-
-          # Create GitHub release
+          # Create GitHub release with auto-generated notes only
           gh release create "v$NEW_VERSION" \
             --title "Release v$NEW_VERSION" \
-            --notes "$RELEASE_NOTES" \
+            --generate-notes \
             ${{ github.event.inputs.pre_release == 'true' && '--prerelease' || '' }}
 
-          echo "Created release v$NEW_VERSION"
+          echo "Created release v$NEW_VERSION with auto-generated release notes"
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
