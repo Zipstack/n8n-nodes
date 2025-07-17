@@ -115,8 +115,16 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version from release: $VERSION"
 
-          # Update package.json to match release version
-          npm version $VERSION --no-git-tag-version
+          # Check if version needs to be updated
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current package.json version: $CURRENT_VERSION"
+
+          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
+            echo "Updating package.json version from $CURRENT_VERSION to $VERSION"
+            npm version $VERSION --no-git-tag-version
+          else
+            echo "Package.json version is already $VERSION, skipping update"
+          fi
 
           # Commit version changes if needed
           if ! git diff --quiet package.json; then
