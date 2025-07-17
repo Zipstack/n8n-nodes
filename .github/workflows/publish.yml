@@ -1,9 +1,34 @@
-name: Publish Package to NPM
+name: Release and Publish Package
+
 on:
+  # Manual trigger with version bump input
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      pre_release:
+        description: "Create as pre-release"
+        required: false
+        default: false
+        type: boolean
+      release_notes:
+        description: "Release notes (optional)"
+        required: false
+        type: string
+
+  # Also trigger on release published (for manual releases)
   release:
     types: [published]
+
 jobs:
-  build:
+  release-and-publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,64 +39,121 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      # Extract version from release tag
-      - name: Extract version from release
-        id: extract_version
-        run: |
-          # Get the release tag name and remove 'v' prefix if present
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION=${VERSION#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-
       # Configure git for commits
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Setup .npmrc file to publish to npm
+      # Setup Node.js
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
           registry-url: "https://registry.npmjs.org"
 
-      # Update package.json version
-      - name: Update package.json version
-        run: |
-          npm version ${{ steps.extract_version.outputs.version }} --no-git-tag-version
-          echo "Updated package.json to version ${{ steps.extract_version.outputs.version }}"
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
 
-      # Install dependencies (this will update package-lock.json with new version)
-      - run: npm ci
+      # Handle workflow_dispatch (manual trigger)
+      - name: Bump version and create release
+        if: github.event_name == 'workflow_dispatch'
+        id: create_release
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Bump version based on input
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version)
+          NEW_VERSION=${NEW_VERSION#v}  # Remove 'v' prefix
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Commit version changes
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git push origin main
+
+          # Create git tag
+          git tag "v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+
+          # Prepare release notes
+          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
+          if [ -z "$RELEASE_NOTES" ]; then
+            RELEASE_NOTES="Release version $NEW_VERSION"
+          fi
+
+          # Create GitHub release
+          gh release create "v$NEW_VERSION" \
+            --title "Release v$NEW_VERSION" \
+            --notes "$RELEASE_NOTES" \
+            ${{ github.event.inputs.pre_release == 'true' && '--prerelease' || '' }}
+
+          echo "Created release v$NEW_VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Handle release event (extract version from existing release)
+      - name: Extract version from release
+        if: github.event_name == 'release'
+        id: extract_version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version from release: $VERSION"
+
+          # Update package.json to match release version
+          npm version $VERSION --no-git-tag-version
+
+          # Commit version changes if needed
+          if ! git diff --quiet package.json; then
+            git add package.json package-lock.json
+            git commit -m "chore: sync version to $VERSION [skip ci]"
+            git push origin main
+          fi
+
+      # Set version for subsequent steps
+      - name: Set version output
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ steps.create_release.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ steps.extract_version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
 
       # Verify the version was updated correctly
       - name: Verify version update
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "Package.json version: $PACKAGE_VERSION"
-          echo "Release version: ${{ steps.extract_version.outputs.version }}"
-          if [ "$PACKAGE_VERSION" != "${{ steps.extract_version.outputs.version }}" ]; then
+          echo "Target version: ${{ steps.version.outputs.version }}"
+          if [ "$PACKAGE_VERSION" != "${{ steps.version.outputs.version }}" ]; then
             echo "Version mismatch! Exiting..."
             exit 1
           fi
 
-      # Commit and push version changes to main
-      - name: Commit version changes
-        run: |
-          git add package.json package-lock.json
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update version to ${{ steps.extract_version.outputs.version }} [skip ci]"
-            git push origin HEAD:main
-            echo "Committed and pushed version changes to main branch"
-          fi
-
       # Build the package
-      - run: npm run build
+      - name: Build package
+        run: npm run build
+
+      # Run linting
+      - name: Run linting
+        run: npm run lint
 
       # Publish to npm
-      - run: npm publish --provenance --access public
+      - name: Publish to NPM
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+
+      # Output success message
+      - name: Success message
+        run: |
+          echo "✅ Successfully published version ${{ steps.version.outputs.version }} to NPM"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🚀 Created release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
+          fi
