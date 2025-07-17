@@ -19,7 +19,7 @@ This is an n8n community node package that provides integrations with Unstract s
 
 ## Features
 
-This package includes four main nodes:
+This package includes following main nodes:
 
 ### 🔤 LLMWhisperer Node
 - Convert documents (PDF, images, etc.) to layout-preserved plain text
