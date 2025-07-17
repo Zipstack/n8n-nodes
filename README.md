@@ -19,7 +19,7 @@ This is an n8n community node package that provides integrations with Unstract s
 
 ## Features
 
-This package includes two main nodes:
+This package includes following main nodes:
 
 ### 🔤 LLMWhisperer Node
 - Convert documents (PDF, images, etc.) to layout-preserved plain text
@@ -32,6 +32,18 @@ This package includes two main nodes:
 - Extract structured data from unstructured documents
 - Support for custom API deployments
 - Seamless integration with Unstract workflows
+
+### 📤 Unstract HITL Push Node
+- Push documents to Human-in-the-Loop (HITL) processing queues
+- Configure timeout, metrics, metadata, and queue targeting
+- Support for various document types and queue configurations
+- Error handling for upload and processing issues
+
+### 📥 Unstract HITL Fetch Node
+- Retrieve approved results from HITL processing queues
+- Poll for completed processing with configurable intervals
+- Optional queue name parameter for targeted fetching
+- Proper error handling for "No approved items available" responses
 
 ## Installation
 
@@ -81,6 +93,11 @@ Before using these nodes, you'll need:
    - Create new credentials of type "Unstract API"
    - Enter your Unstract API key and endpoint details
 
+3. **Unstract HITL Credentials**:
+   - Go to your n8n credentials settings
+   - Create new credentials of type "Unstract HITL"
+   - Enter your HITL API key for Human-in-the-Loop processing
+
 ## Usage Examples
 
 ### LLMWhisperer Node
@@ -102,6 +119,46 @@ Use the Unstract node to extract structured data:
 3. Set the input document (binary data)
 4. Specify your API deployment name
 5. Execute to get structured data output
+
+### Unstract HITL Push Node
+
+Use the HITL Push node to send documents for human review:
+
+1. Add the Unstract HITL Push node to your workflow
+2. Configure your HITL API credentials
+3. Set the input document (binary data)
+4. Configure queue name, timeout, and metadata options
+5. Execute to push document to HITL processing queue
+
+### Unstract HITL Fetch Node
+
+Use the HITL Fetch node to retrieve approved results:
+
+1. Add the Unstract HITL Fetch node to your workflow
+2. Configure your HITL API credentials
+3. Optionally specify a queue name to target specific queues
+4. Configure polling interval and retry settings
+5. Execute to fetch approved results from HITL queue
+
+## Screenshots
+
+### Node Integration Examples
+
+Visual guides for integrating Unstract nodes in your n8n workflows:
+
+#### LLMWhisperer Node Configuration
+![LLMWhisperer node setup and configuration](screenshots/llmwhisperer-node-config.png)
+
+#### Unstract Node Configuration  
+![Unstract API node setup and configuration](screenshots/unstract-node-config.png)
+
+#### HITL Push Node Configuration
+![HITL Push node setup with queue configuration and document upload](screenshots/hitl-push-node-config.png)
+
+#### HITL Fetch Node Configuration
+![HITL Fetch node setup with polling configuration](screenshots/hitl-fetch-node-config.png)
+
+These screenshots help developers understand the visual setup and configuration of each node type for seamless integration into n8n workflows.
 
 ## API Documentation
 
