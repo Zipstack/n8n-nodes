@@ -1,4 +1,4 @@
-name: Release and Publish Package
+name: Release Tag and Publish Package
 
 on:
   # Manual trigger with version bump input
@@ -22,10 +22,6 @@ on:
         description: "Release notes (optional)"
         required: false
         type: string
-
-  # Also trigger on release published (for manual releases)
-  release:
-    types: [published]
 
 jobs:
   release-and-publish:
@@ -99,43 +95,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
-      # Handle release event (extract version from existing release)
-      - name: Extract version from release
-        if: github.event_name == 'release'
-        id: extract_version
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION=${VERSION#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version from release: $VERSION"
-
-          # Check if version needs to be updated
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current package.json version: $CURRENT_VERSION"
-
-          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
-            echo "Updating package.json version from $CURRENT_VERSION to $VERSION"
-            npm version $VERSION --no-git-tag-version
-          else
-            echo "Package.json version is already $VERSION, skipping update"
-          fi
-
-          # Commit version changes if needed
-          if ! git diff --quiet package.json; then
-            git add package.json package-lock.json
-            git commit -m "chore: sync version to $VERSION [skip ci]"
-            git push origin main
-          fi
-
       # Set version for subsequent steps
       - name: Set version output
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ steps.create_release.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ steps.extract_version.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
+          echo "version=${{ steps.create_release.outputs.version }}" >> $GITHUB_OUTPUT
 
       # Verify the version was updated correctly
       - name: Verify version update
@@ -166,6 +130,5 @@ jobs:
       - name: Success message
         run: |
           echo "✅ Successfully published version ${{ steps.version.outputs.version }} to NPM"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🚀 Created release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
-          fi
+          echo "🚀 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
+          echo "📦 NPM: https://www.npmjs.com/package/n8n-nodes-unstract/v/${{ steps.version.outputs.version }}"
