@@ -219,6 +219,7 @@ class LLMWhisperer {
                 const addLineNumbers = this.getNodeParameter('add_line_nos', i);
                 const timeout = this.getNodeParameter('timeout', i);
 
+
                 // Prepare API request parameters
                 const requestOptions = {
                     method: 'POST',
@@ -243,26 +244,33 @@ class LLMWhisperer {
                         file_name: fileName,
                         add_line_nos: addLineNumbers,
                     },
-                    accept: 'application/json',
                 };
 
                 // Make the API request
                 logger.info('Making API request to LLMWhisperer API...');
-                const result = await helpers.request(requestOptions);
+                let result;
+                try {
+                    result = await helpers.request(requestOptions);
+                } catch (requestError) {
+                    logger.error('Error during LLMWhisperer API request:', requestError);
+                    throw requestError;
+                }
+
                 if (result.status && result.status != 202) {
                     throw new NodeOperationError(this.getNode(), result.body);
                 }
 
-                //Poll the status API endpoint by calling whisper-status endpoint
-
                 //Convert result to JSON
                 const resultContent = JSON.parse(result);
                 let whisper_hash = resultContent['whisper_hash'];
+
                 let status = 'processing';
                 const t1 = Date.now();
-                while (status !== 'processed') {
+
+                while (status !== 'processed' && status !== 'error') {
                     await sleep(2000);
-                    const result = await helpers.request({
+
+                    const statusResult = await helpers.request({
                         method: 'GET',
                         url: `${host}/api/v2/whisper-status`,
                         headers: {
@@ -272,33 +280,52 @@ class LLMWhisperer {
                             whisper_hash: whisper_hash,
                         },
                     });
-                    const resultContentX = JSON.parse(result);
+
+                    const resultContentX = JSON.parse(statusResult);
                     status = resultContentX['status'];
+
                     const t2 = Date.now();
-                    if ((t2 - t1) / 1000 > timeout) {
+                    const elapsedSeconds = (t2 - t1) / 1000;
+
+                    if (elapsedSeconds > timeout) {
                         throw new NodeOperationError(
                             this.getNode(),
                             `Operation timed out after ${timeout} seconds`,
                         );
                     }
+
+                    // Check for error status
+                    if (status === 'error') {
+                        const errorMessage = resultContentX.message || 'Processing failed';
+                        const errorDetails = resultContentX.detail ? JSON.stringify(resultContentX.detail) : '';
+                        throw new NodeOperationError(
+                            this.getNode(),
+                            `LLMWhisperer processing error: ${errorMessage}. ${errorDetails}`,
+                        );
+                    }
                 }
-                // Retrieve the extraction using the whisper-retrieve endpoint
-                const retrieveResult = await helpers.request({
-                    method: 'GET',
-                    url: `${host}/api/v2/whisper-retrieve`,
-                    headers: {
-                        'unstract-key': `${apiKey}`,
-                    },
-                    qs: {
-                        whisper_hash: whisper_hash,
-                    },
-                });
-                const retrieveResultContent = JSON.parse(retrieveResult);
-                delete retrieveResultContent.metadata;
-                delete retrieveResultContent.webhook_metadata;
-                returnData.push({
-                    json: retrieveResultContent,
-                });
+
+                // Only retrieve if status is 'processed'
+                if (status === 'processed') {
+                    // Retrieve the extraction using the whisper-retrieve endpoint
+                    const retrieveResult = await helpers.request({
+                        method: 'GET',
+                        url: `${host}/api/v2/whisper-retrieve`,
+                        headers: {
+                            'unstract-key': `${apiKey}`,
+                        },
+                        qs: {
+                            whisper_hash: whisper_hash,
+                        },
+                    });
+
+                    const retrieveResultContent = JSON.parse(retrieveResult);
+                    delete retrieveResultContent.metadata;
+                    delete retrieveResultContent.webhook_metadata;
+                    returnData.push({
+                        json: retrieveResultContent,
+                    });
+                }
             }
 
             return [returnData];
