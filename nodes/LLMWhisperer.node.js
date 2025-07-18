@@ -219,7 +219,6 @@ class LLMWhisperer {
                 const addLineNumbers = this.getNodeParameter('add_line_nos', i);
                 const timeout = this.getNodeParameter('timeout', i);
 
-
                 // Prepare API request parameters
                 const requestOptions = {
                     method: 'POST',
@@ -244,6 +243,7 @@ class LLMWhisperer {
                         file_name: fileName,
                         add_line_nos: addLineNumbers,
                     },
+                    accept: 'application/json',
                 };
 
                 // Make the API request
