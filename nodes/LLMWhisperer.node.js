@@ -266,6 +266,7 @@ class LLMWhisperer {
 
                 let status = 'processing';
                 const t1 = Date.now();
+                let resultContentX;
 
                 while (status !== 'processed' && status !== 'error') {
                     await sleep(2000);
@@ -281,11 +282,11 @@ class LLMWhisperer {
                         },
                     });
 
-                    const resultContentX = JSON.parse(statusResult);
+                    resultContentX = JSON.parse(statusResult);
                     status = resultContentX['status'];
 
-                    const t2 = Date.now();
-                    const elapsedSeconds = (t2 - t1) / 1000;
+                    const currentTime = Date.now();
+                    const elapsedSeconds = (currentTime - t1) / 1000;
 
                     if (elapsedSeconds > timeout) {
                         throw new NodeOperationError(
@@ -293,16 +294,16 @@ class LLMWhisperer {
                             `Operation timed out after ${timeout} seconds`,
                         );
                     }
+                }
 
-                    // Check for error status
-                    if (status === 'error') {
-                        const errorMessage = resultContentX.message || 'Processing failed';
-                        const errorDetails = resultContentX.detail ? JSON.stringify(resultContentX.detail) : '';
-                        throw new NodeOperationError(
-                            this.getNode(),
-                            `LLMWhisperer processing error: ${errorMessage}. ${errorDetails}`,
-                        );
-                    }
+                // Handle error status after loop
+                if (status === 'error') {
+                    const errorMessage = resultContentX.message || 'Processing failed';
+                    const errorDetails = resultContentX.detail ? JSON.stringify(resultContentX.detail) : '';
+                    throw new NodeOperationError(
+                        this.getNode(),
+                        `LLMWhisperer processing error: ${errorMessage}. ${errorDetails}`,
+                    );
                 }
 
                 // Only retrieve if status is 'processed'
