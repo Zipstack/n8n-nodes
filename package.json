@@ -42,11 +42,14 @@
     "n8nNodesApiVersion": 1,
     "credentials": [
       "dist/credentials/LLMWhispererApi.credentials.js",
-      "dist/credentials/UnstractApi.credentials.js"
+      "dist/credentials/UnstractApi.credentials.js",
+      "dist/credentials/UnstractHITL.credentials.js"
     ],
     "nodes": [
       "dist/nodes/LLMWhisperer.node.js",
-      "dist/nodes/Unstract.node.js"
+      "dist/nodes/Unstract.node.js",
+      "dist/nodes/UnstractHITLFetch.node.js",
+      "dist/nodes/UnstractHITLPush.node.js"
     ]
   },
   "devDependencies": {
