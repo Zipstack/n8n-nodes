@@ -4,6 +4,8 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
+	NodeConnectionType,
+	IHttpRequestMethods,
 } from 'n8n-workflow';
 
 const sleep = (ms: number): Promise<void> =>
@@ -33,8 +35,8 @@ export class LLMWhisperer implements INodeType {
 		defaults: {
 			name: 'LLMWhisperer',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
 		credentials: [
 			{
 				name: 'llmWhispererApi',
@@ -226,7 +228,7 @@ export class LLMWhisperer implements INodeType {
 				const timeout = this.getNodeParameter('timeout', i) as number;
 
 				const requestOptions = {
-					method: 'POST',
+					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/api/v2/whisper`,
 					headers: {
 						'unstract-key': `${apiKey}`,
@@ -275,7 +277,7 @@ export class LLMWhisperer implements INodeType {
 					await sleep(2000);
 
 					const statusResult = await helpers.request({
-						method: 'GET',
+						method: 'GET' as IHttpRequestMethods,
 						url: `${host}/api/v2/whisper-status`,
 						headers: {
 							'unstract-key': `${apiKey}`,
@@ -310,7 +312,7 @@ export class LLMWhisperer implements INodeType {
 
 				if (status === 'processed') {
 					const retrieveResult = await helpers.request({
-						method: 'GET',
+						method: 'GET' as IHttpRequestMethods,
 						url: `${host}/api/v2/whisper-retrieve`,
 						headers: {
 							'unstract-key': `${apiKey}`,

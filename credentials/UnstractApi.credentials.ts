@@ -7,7 +7,7 @@ export class UnstractApi implements ICredentialType {
 	name = 'unstractApi';
 	displayName = 'Unstract API';
 	documentationUrl = 'https://docs.unstract.com/unstract/index.html';
-	icon = 'file:llmWhisperer.svg';
+	icon = 'file:llmWhisperer.svg' as const;
 	
 	properties: INodeProperties[] = [
 		{

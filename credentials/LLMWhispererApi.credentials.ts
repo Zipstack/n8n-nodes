@@ -7,7 +7,7 @@ export class LLMWhispererApi implements ICredentialType {
 	name = 'llmWhispererApi';
 	displayName = 'LLMWhisperer API';
 	documentationUrl = 'https://docs.unstract.com/llmwhisperer/';
-	icon = 'file:llmWhisperer.svg';
+	icon = 'file:llmWhisperer.svg' as const;
 	
 	properties: INodeProperties[] = [
 		{

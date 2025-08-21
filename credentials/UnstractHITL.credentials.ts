@@ -7,7 +7,7 @@ export class UnstractHITL implements ICredentialType {
 	name = 'unstractHITL';
 	displayName = 'Unstract HITL';
 	documentationUrl = 'https://docs.unstract.com/unstract/index.html';
-	icon = 'file:llmWhisperer.svg';
+	icon = 'file:llmWhisperer.svg' as const;
 	
 	properties: INodeProperties[] = [
 		{

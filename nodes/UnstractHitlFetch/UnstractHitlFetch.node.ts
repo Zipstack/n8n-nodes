@@ -4,6 +4,8 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
+	NodeConnectionType,
+	IHttpRequestMethods,
 } from 'n8n-workflow';
 
 export class UnstractHitlFetch implements INodeType {
@@ -17,8 +19,8 @@ export class UnstractHitlFetch implements INodeType {
 		defaults: {
 			name: 'Unstract HITL Fetch',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
 		credentials: [
 			{
 				name: 'unstractHITLApi',
@@ -69,7 +71,7 @@ export class UnstractHitlFetch implements INodeType {
 			}
 
 			const options = {
-				method: 'GET',
+				method: 'GET' as IHttpRequestMethods,
 				url,
 				headers: {
 					Authorization: `Bearer ${hitlKey}`,

@@ -4,6 +4,8 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
+	NodeConnectionType,
+	IHttpRequestMethods,
 } from 'n8n-workflow';
 
 const sleep = (ms: number): Promise<void> =>
@@ -32,8 +34,8 @@ export class UnstractHitlPush implements INodeType {
 		defaults: {
 			name: 'Unstract HITL Push',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
 		credentials: [
 			{
 				name: 'unstractApi',
@@ -155,7 +157,7 @@ export class UnstractHitlPush implements INodeType {
 				}
 
 				const requestOptions = {
-					method: 'POST',
+					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
@@ -177,7 +179,7 @@ export class UnstractHitlPush implements INodeType {
 						await sleep(2000);
 
 						const pollRequest = {
-							method: 'GET',
+							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
