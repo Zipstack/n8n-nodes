@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-unstract",
-  "version": "0.3.4",
+  "version": "0.3.6",
   "description": "n8n nodes for Unstract services including LLMWhisperer and Unstract API",
   "keywords": [
     "n8n-community-node-package",
@@ -9,7 +9,15 @@
     "n8n",
     "n8n-node",
     "document-processing",
-    "text-extraction"
+    "text-extraction",
+    "ocr",
+    "optical-character-recognition",
+    "pdf-extraction",
+    "image-to-text",
+    "document-ocr",
+    "text-recognition",
+    "pdf-to-text",
+    "scan-to-text"
   ],
   "engines": {
     "node": ">=20.15"
@@ -26,17 +34,16 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "mkdir -p dist/nodes dist/credentials && cp nodes/* dist/nodes/ && cp credentials/* dist/credentials/",
-    "dev": "nodemon",
+    "build": "npx rimraf dist && tsc && gulp build:icons",
+    "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials",
-    "lintfix": "eslint nodes credentials --fix",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run lint"
+    "lint": "eslint nodes/**/*.ts package.json",
+    "lintfix": "eslint nodes/**/*.ts package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
-    "dist/**/*",
-    "README.md"
+    "dist",
+    "nodes/**/*.node.json"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
@@ -46,20 +53,22 @@
       "dist/credentials/UnstractHITL.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/LLMWhisperer.node.js",
-      "dist/nodes/Unstract.node.js",
-      "dist/nodes/UnstractHITLFetch.node.js",
-      "dist/nodes/UnstractHITLPush.node.js"
+      "dist/nodes/LlmWhisperer/LlmWhisperer.node.js",
+      "dist/nodes/Unstract/Unstract.node.js",
+      "dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js",
+      "dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js"
     ]
   },
   "devDependencies": {
-    "eslint": "^8.28.0",
-    "n8n-core": "^0.125.0",
-    "n8n-workflow": "^0.107.0",
-    "prettier": "^2.7.1"
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/parser": "~8.32.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "gulp": "^5.0.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
   },
   "peerDependencies": {
-    "n8n-core": ">=0.125.0",
-    "n8n-workflow": ">=0.107.0"
+    "n8n-workflow": "*"
   }
 }
