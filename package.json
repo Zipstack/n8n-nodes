@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-unstract",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "n8n nodes for Unstract services including LLMWhisperer and Unstract API",
   "keywords": [
     "n8n-community-node-package",
