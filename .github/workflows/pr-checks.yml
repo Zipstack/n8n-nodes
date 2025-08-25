@@ -1,0 +1,34 @@
+name: PR Checks
+
+on: [pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run comprehensive checks
+        run: npm run prepublishOnly
+        
+      - name: Validate package structure
+        run: npm pack --dry-run
+        
+      - name: Verify required files exist
+        run: |
+          test -f package.json
+          test -d dist
+          test -f dist/credentials/LLMWhispererApi.credentials.js
+          test -f dist/credentials/UnstractApi.credentials.js
+          test -f dist/credentials/UnstractHITLApi.credentials.js
+          test -f dist/nodes/LlmWhisperer/LlmWhisperer.node.js
+          test -f dist/nodes/Unstract/Unstract.node.js
+          test -f dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js
+          test -f dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js
