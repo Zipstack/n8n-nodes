@@ -3,9 +3,9 @@ import {
 	INodeProperties,
 } from 'n8n-workflow';
 
-export class UnstractHITL implements ICredentialType {
-	name = 'unstractHITL';
-	displayName = 'Unstract HITL';
+export class UnstractHITLApi implements ICredentialType {
+	name = 'unstractHITLApi';
+	displayName = 'Unstract HITL API';
 	documentationUrl = 'https://docs.unstract.com/unstract/index.html';
 	icon = 'file:llmWhisperer.svg' as const;
 	
