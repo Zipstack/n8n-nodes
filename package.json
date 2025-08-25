@@ -50,7 +50,7 @@
     "credentials": [
       "dist/credentials/LLMWhispererApi.credentials.js",
       "dist/credentials/UnstractApi.credentials.js",
-      "dist/credentials/UnstractHITL.credentials.js"
+      "dist/credentials/UnstractHITLApi.credentials.js"
     ],
     "nodes": [
       "dist/nodes/LlmWhisperer/LlmWhisperer.node.js",
