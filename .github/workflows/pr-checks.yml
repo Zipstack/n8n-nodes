@@ -21,14 +21,45 @@ jobs:
       - name: Validate package structure
         run: npm pack --dry-run
         
-      - name: Verify required files exist
+      - name: Verify built files match package.json n8n section
         run: |
-          test -f package.json
-          test -d dist
-          test -f dist/credentials/LLMWhispererApi.credentials.js
-          test -f dist/credentials/UnstractApi.credentials.js
-          test -f dist/credentials/UnstractHITLApi.credentials.js
-          test -f dist/nodes/LlmWhisperer/LlmWhisperer.node.js
-          test -f dist/nodes/Unstract/Unstract.node.js
-          test -f dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js
-          test -f dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js
+          # Check that all files referenced in package.json n8n section actually exist
+          MISSING_FILES=""
+          
+          if [ ! -f "dist/credentials/LLMWhispererApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/LLMWhispererApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/credentials/UnstractApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/UnstractApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/credentials/UnstractHITLApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/UnstractHITLApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/nodes/LlmWhisperer/LlmWhisperer.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/LlmWhisperer/LlmWhisperer.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/Unstract/Unstract.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/Unstract/Unstract.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js"
+          fi
+          
+          if [ -n "$MISSING_FILES" ]; then
+            echo "❌ Missing required files:"
+            for file in $MISSING_FILES; do
+              echo "  - $file"
+            done
+            exit 1
+          fi
+          
+          echo "✅ All required n8n files exist in dist/"
