@@ -23,7 +23,7 @@ const sleep = (ms: number): Promise<void> =>
 		check();
 	});
 
-export class LLMWhisperer implements INodeType {
+export class LlmWhisperer implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'LLMWhisperer',
 		name: 'llmWhisperer',
