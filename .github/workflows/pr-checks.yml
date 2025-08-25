@@ -1,0 +1,65 @@
+name: PR Checks
+
+on: [pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run comprehensive checks
+        run: npm run prepublishOnly
+        
+      - name: Validate package structure
+        run: npm pack --dry-run
+        
+      - name: Verify built files match package.json n8n section
+        run: |
+          # Check that all files referenced in package.json n8n section actually exist
+          MISSING_FILES=""
+          
+          if [ ! -f "dist/credentials/LLMWhispererApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/LLMWhispererApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/credentials/UnstractApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/UnstractApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/credentials/UnstractHITLApi.credentials.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/credentials/UnstractHITLApi.credentials.js"
+          fi
+          
+          if [ ! -f "dist/nodes/LlmWhisperer/LlmWhisperer.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/LlmWhisperer/LlmWhisperer.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/Unstract/Unstract.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/Unstract/Unstract.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/UnstractHitlFetch/UnstractHitlFetch.node.js"
+          fi
+          
+          if [ ! -f "dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js" ]; then
+            MISSING_FILES="$MISSING_FILES dist/nodes/UnstractHitlPush/UnstractHitlPush.node.js"
+          fi
+          
+          if [ -n "$MISSING_FILES" ]; then
+            echo "❌ Missing required files:"
+            for file in $MISSING_FILES; do
+              echo "  - $file"
+            done
+            exit 1
+          fi
+          
+          echo "✅ All required n8n files exist in dist/"
