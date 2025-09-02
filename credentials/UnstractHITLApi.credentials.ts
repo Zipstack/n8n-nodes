@@ -37,7 +37,7 @@ export class UnstractHITLApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'Authorization': '=Bearer {{ $credentials.HITLKey }}',
+				'Authorization': '=Bearer apiKey',
 			},
 		},
 	};

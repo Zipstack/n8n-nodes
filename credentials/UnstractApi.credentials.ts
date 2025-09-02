@@ -37,7 +37,7 @@ export class UnstractApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'Authorization': '=Bearer {{ $credentials.apiKey }}',
+				'Authorization': '=Bearer apiKey',
 			},
 		},
 	};
