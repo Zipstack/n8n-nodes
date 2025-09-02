@@ -45,9 +45,8 @@ export class UnstractHITLApi implements ICredentialType {
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://httpbin.org',
-			url: '/status/200',
+			url: '/anything',
 			method: 'GET',
 		},
-		skipAuth: true,
 	};
 }
