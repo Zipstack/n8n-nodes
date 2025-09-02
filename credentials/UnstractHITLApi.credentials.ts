@@ -1,6 +1,8 @@
 import {
 	ICredentialType,
 	INodeProperties,
+	ICredentialTestRequest,
+	IAuthenticateGeneric,
 } from 'n8n-workflow';
 
 export class UnstractHITLApi implements ICredentialType {
@@ -30,4 +32,22 @@ export class UnstractHITLApi implements ICredentialType {
 			description: 'Your Unstract Organization ID',
 		},
 	];
+
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: {
+				'Authorization': '=Bearer {{ $credentials.HITLKey }}',
+			},
+		},
+	};
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://httpbin.org',
+			url: '/status/200',
+			method: 'GET',
+		},
+		skipAuth: true,
+	};
 }

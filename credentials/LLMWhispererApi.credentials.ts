@@ -1,6 +1,8 @@
 import {
 	ICredentialType,
 	INodeProperties,
+	ICredentialTestRequest,
+	IAuthenticateGeneric,
 } from 'n8n-workflow';
 
 export class LLMWhispererApi implements ICredentialType {
@@ -22,4 +24,22 @@ export class LLMWhispererApi implements ICredentialType {
 			description: 'The API key for LLMWhisperer service',
 		},
 	];
+
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: {
+				'Authorization': '=Bearer {{ $credentials.apiKey }}',
+			},
+		},
+	};
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://httpbin.org',
+			url: '/status/200',
+			method: 'GET',
+		},
+		skipAuth: true,
+	};
 }
