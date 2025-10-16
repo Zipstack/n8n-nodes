@@ -114,7 +114,6 @@ export class UnstractHitlPush implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('unstractApi');
-			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
 			const { helpers, logger } = this;
 
@@ -159,15 +158,12 @@ export class UnstractHitlPush implements INodeType {
 				const requestOptions = {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-					},
 					formData,
 					timeout: 5 * 60 * 1000,
 				};
 
 				logger.info('[HITL] Sending file to Unstract HITL API...');
-				const result = await helpers.request(requestOptions);
+				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
 				let resultContent = JSON.parse(result).message;
 				let executionStatus = resultContent.execution_status;
 
@@ -181,14 +177,11 @@ export class UnstractHitlPush implements INodeType {
 						const pollRequest = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
-							headers: {
-								Authorization: `Bearer ${apiKey}`,
-							},
 							timeout: 5 * 60 * 1000,
 						};
 
 						try {
-							const pollResult = await helpers.request(pollRequest);
+							const pollResult = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', pollRequest);
 							resultContent = JSON.parse(pollResult);
 							executionStatus = resultContent.status;
 						} catch (error: any) {
@@ -216,7 +209,10 @@ export class UnstractHitlPush implements INodeType {
 					}
 				}
 
-				returnData.push({ json: resultContent });
+				returnData.push({
+					json: resultContent,
+					pairedItem: { item: i }
+				});
 			}
 
 			return [returnData];

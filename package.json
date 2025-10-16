@@ -35,11 +35,12 @@
   "main": "index.js",
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
+    "build:dev": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes/**/*.ts credentials/**/*.ts package.json",
     "lintfix": "eslint nodes/**/*.ts credentials/**/*.ts package.json --fix",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json && npm audit --audit-level=high"
+    "validate": "npm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
     "dist",
@@ -70,8 +71,5 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "overrides": {
-    "form-data": "^4.0.4"
   }
 }

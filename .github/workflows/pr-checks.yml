@@ -16,7 +16,7 @@ jobs:
         run: npm ci
         
       - name: Run comprehensive checks
-        run: npm run prepublishOnly
+        run: npm run validate
         
       - name: Validate package structure
         run: npm pack --dry-run

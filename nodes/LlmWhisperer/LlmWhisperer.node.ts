@@ -195,8 +195,6 @@ export class LlmWhisperer implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		try {
-			const credentials = await this.getCredentials('llmWhispererApi');
-			const apiKey = credentials.apiKey as string;
 			const { helpers, logger } = this;
 
 			for (let i = 0; i < items.length; i++) {
@@ -231,7 +229,6 @@ export class LlmWhisperer implements INodeType {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/api/v2/whisper`,
 					headers: {
-						'unstract-key': `${apiKey}`,
 						'Content-Type': 'application/octet-stream',
 					},
 					body: fileBuffer,
@@ -256,7 +253,7 @@ export class LlmWhisperer implements INodeType {
 				logger.info('Making API request to LLMWhisperer API...');
 				let result: any;
 				try {
-					result = await helpers.request(requestOptions);
+					result = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', requestOptions);
 				} catch (requestError) {
 					logger.error('Error during LLMWhisperer API request:', requestError);
 					throw requestError;
@@ -276,12 +273,9 @@ export class LlmWhisperer implements INodeType {
 				while (status !== 'processed' && status !== 'error') {
 					await sleep(2000);
 
-					const statusResult = await helpers.request({
+					const statusResult = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', {
 						method: 'GET' as IHttpRequestMethods,
 						url: `${host}/api/v2/whisper-status`,
-						headers: {
-							'unstract-key': `${apiKey}`,
-						},
 						qs: {
 							whisper_hash: whisperHash,
 						},
@@ -311,12 +305,9 @@ export class LlmWhisperer implements INodeType {
 				}
 
 				if (status === 'processed') {
-					const retrieveResult = await helpers.request({
+					const retrieveResult = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', {
 						method: 'GET' as IHttpRequestMethods,
 						url: `${host}/api/v2/whisper-retrieve`,
-						headers: {
-							'unstract-key': `${apiKey}`,
-						},
 						qs: {
 							whisper_hash: whisperHash,
 						},
@@ -327,6 +318,7 @@ export class LlmWhisperer implements INodeType {
 					delete retrieveResultContent.webhook_metadata;
 					returnData.push({
 						json: retrieveResultContent,
+						pairedItem: { item: i },
 					});
 				}
 			}

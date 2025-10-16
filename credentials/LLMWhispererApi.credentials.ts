@@ -29,7 +29,7 @@ export class LLMWhispererApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'Authorization': '=Bearer apiKey',
+				'unstract-key': '={{$credentials.apiKey}}',
 			},
 		},
 	};
