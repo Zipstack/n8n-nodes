@@ -40,6 +40,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes/**/*.ts credentials/**/*.ts package.json",
     "lintfix": "eslint nodes/**/*.ts credentials/**/*.ts package.json --fix",
+    "audit": "npm audit --audit-level=high",
     "validate": "npm run build && eslint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
