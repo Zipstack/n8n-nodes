@@ -250,21 +250,17 @@ export class LlmWhisperer implements INodeType {
 					accept: 'application/json',
 				};
 
-				logger.info('[LLMWhisperer] Making API request to: ' + requestOptions.url);
-				logger.info('[LLMWhisperer] File: ' + binaryData.fileName + ' (' + fileBuffer.length + ' bytes)');
 
 				let result: any;
 				try {
 					result = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', requestOptions);
 				} catch (requestError: any) {
-					logger.error('[LLMWhisperer] Error during API request: ' + requestError.message);
 					throw requestError;
 				}
 
 				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
 				const resultContent = typeof result === 'string' ? JSON.parse(result) : result;
 
-				logger.info('[LLMWhisperer] API Response: ' + JSON.stringify(resultContent));
 
 				if (!resultContent.whisper_hash) {
 					throw new NodeOperationError(
@@ -293,7 +289,6 @@ export class LlmWhisperer implements INodeType {
 					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
 					resultContentX = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
 					status = resultContentX.status;
-					logger.info('[LLMWhisperer] Status check: ' + status);
 
 					const currentTime = Date.now();
 					const elapsedSeconds = (currentTime - t1) / 1000;
@@ -326,7 +321,6 @@ export class LlmWhisperer implements INodeType {
 
 					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
 					const retrieveResultContent = typeof retrieveResult === 'string' ? JSON.parse(retrieveResult) : retrieveResult;
-					logger.info('[LLMWhisperer] Retrieved result successfully');
 
 					delete retrieveResultContent.metadata;
 					delete retrieveResultContent.webhook_metadata;

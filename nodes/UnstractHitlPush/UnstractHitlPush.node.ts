@@ -193,15 +193,11 @@ export class UnstractHitlPush implements INodeType {
 					timeout: 5 * 60 * 1000,
 				};
 
-				logger.info('[HITL] Making API request to: ' + requestOptions.url);
-				logger.info('[HITL] File: ' + binaryData.fileName + ' (' + fileBuffer.length + ' bytes)');
-				logger.info('[HITL] Request headers: ' + JSON.stringify(requestOptions.headers));
 
 				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
 				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
 				const resultData = typeof result === 'string' ? JSON.parse(result) : result;
 
-				logger.info('[HITL] API Response: ' + JSON.stringify(resultData));
 
 				if (!resultData || !resultData.message) {
 					throw new NodeOperationError(
@@ -228,9 +224,6 @@ export class UnstractHitlPush implements INodeType {
 							},
 							timeout: 5 * 60 * 1000,
 						};
-						logger.info('[HITL] Status check URL: ' + statusRequestOptions.url);
-						logger.info('[HITL] Status check method: ' + statusRequestOptions.method);
-						logger.info('[HITL] Status check headers: ' + JSON.stringify(statusRequestOptions.headers));
 
 						try {
 							const statusResult = await helpers.httpRequest(statusRequestOptions);
@@ -241,12 +234,9 @@ export class UnstractHitlPush implements INodeType {
 							if (error.response?.status === 422 && error.response?.data) {
 								resultContent = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
 								executionStatus = resultContent.status;
-								logger.info('[HITL] Status check returned 422 (still executing): ' + executionStatus);
 							} else {
 								// Actual error - log and rethrow
-								logger.error('[HITL] Status check failed: ' + error.message);
 								if (error.response?.status) {
-									logger.error('[HITL] Status check response status: ' + error.response.status);
 								}
 								throw new NodeOperationError(
 									this.getNode(),

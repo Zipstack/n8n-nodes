@@ -192,15 +192,11 @@ export class Unstract implements INodeType {
 					timeout: 5 * 60 * 1000,
 				};
 
-				logger.info(`Making API request to: ${requestOptions.url}`);
-				logger.info(`File: ${binaryData.fileName} (${fileBuffer.length} bytes)`);
-				logger.info(`Request headers: ${JSON.stringify(requestOptions.headers)}`);
 
 				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
 				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
 				const resultData = typeof result === 'string' ? JSON.parse(result) : result;
 
-				logger.info(`API Response: ${JSON.stringify(resultData)}`);
 
 				if (!resultData || !resultData.message) {
 					throw new NodeOperationError(
@@ -227,9 +223,6 @@ export class Unstract implements INodeType {
 							},
 							timeout: 5 * 60 * 1000,
 						};
-						logger.info(`Status check URL: ${statusRequestOptions.url}`);
-						logger.info(`Status check method: ${statusRequestOptions.method}`);
-						logger.info(`Status check headers: ${JSON.stringify(statusRequestOptions.headers)}`);
 
 
 						try {
@@ -241,12 +234,9 @@ export class Unstract implements INodeType {
 							if (error.response?.status === 422 && error.response?.data) {
 								resultContent = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
 								executionStatus = resultContent.status;
-								logger.info(`Status check returned 422 (still executing): ${executionStatus}`);
 							} else {
 								// Actual error - log and rethrow
-								logger.error(`Status check failed: ${error.message}`);
 								if (error.response?.status) {
-									logger.error(`Status check response status: ${error.response.status}`);
 								}
 								throw new NodeOperationError(
 									this.getNode(),
@@ -278,16 +268,11 @@ export class Unstract implements INodeType {
 
 			return [returnData];
 		} catch (error: any) {
-			this.logger.error(`Error message: ${error.message}`);
-			this.logger.error(`Error name: ${error.name}`);
 			if (error.response?.data) {
-				this.logger.error(`Response data: ${JSON.stringify(error.response.data, null, 2)}`);
 			}
 			if (error.response?.status) {
-				this.logger.error(`Response status: ${error.response.status}`);
 			}
 			if (error.context?.data) {
-				this.logger.error(`Error context: ${JSON.stringify(error.context.data, null, 2)}`);
 			}
 			if (error.message) {
 				throw new NodeOperationError(this.getNode(), error.message);
