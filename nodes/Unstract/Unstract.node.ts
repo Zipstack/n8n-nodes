@@ -112,7 +112,6 @@ export class Unstract implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('unstractApi');
-			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
 			const { helpers, logger } = this;
 
@@ -158,15 +157,12 @@ export class Unstract implements INodeType {
 				const requestOptions = {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
-					headers: {
-						'Authorization': `Bearer ${apiKey}`,
-					},
 					formData,
 					timeout: 5 * 60 * 1000,
 				};
 
 				logger.info('Making API request to Unstract API...');
-				const result = await helpers.request(requestOptions);
+				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
 				let resultContent = JSON.parse(result).message;
 				let executionStatus = resultContent.execution_status;
 
@@ -180,14 +176,11 @@ export class Unstract implements INodeType {
 						const statusRequestOptions = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
-							headers: {
-								'Authorization': `Bearer ${apiKey}`,
-							},
 							timeout: 5 * 60 * 1000,
 						};
 
 						try {
-							const statusResult = await helpers.request(statusRequestOptions);
+							const statusResult = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', statusRequestOptions);
 							resultContent = JSON.parse(statusResult);
 							executionStatus = resultContent.status;
 						} catch (error: any) {
@@ -217,6 +210,7 @@ export class Unstract implements INodeType {
 
 				returnData.push({
 					json: resultContent,
+					pairedItem: { item: i },
 				});
 			}
 

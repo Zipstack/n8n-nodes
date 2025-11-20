@@ -56,7 +56,6 @@ export class UnstractHitlFetch implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		const credentials = await this.getCredentials('unstractHITLApi');
-		const hitlKey = credentials.HITLKey as string;
 		const orgId = credentials.orgId as string;
 		const helpers = this.helpers;
 
@@ -73,23 +72,26 @@ export class UnstractHitlFetch implements INodeType {
 			const options = {
 				method: 'GET' as IHttpRequestMethods,
 				url,
-				headers: {
-					Authorization: `Bearer ${hitlKey}`,
-				},
 			};
 
 			try {
-				const response = await helpers.request(options);
+				const response = await helpers.httpRequestWithAuthentication.call(this, 'unstractHITLApi', options);
 				const parsed = typeof response === 'string' ? JSON.parse(response) : response;
 
 				if (parsed.error) {
 					if (parsed.error === 'No approved items available.') {
-						returnData.push({ json: { message: 'No approved items available', hasData: false } });
+						returnData.push({
+							json: { message: 'No approved items available', hasData: false },
+							pairedItem: { item: i }
+						});
 					} else {
 						throw new NodeOperationError(this.getNode(), `API Error: ${parsed.error}`);
 					}
 				} else if (parsed.data) {
-					returnData.push({ json: { ...parsed.data, hasData: true } });
+					returnData.push({
+						json: { ...parsed.data, hasData: true },
+						pairedItem: { item: i }
+					});
 				} else {
 					throw new NodeOperationError(this.getNode(), 'Unexpected response format.');
 				}
