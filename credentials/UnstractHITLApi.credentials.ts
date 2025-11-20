@@ -9,7 +9,7 @@ export class UnstractHITLApi implements ICredentialType {
 	displayName = 'Unstract HITL API';
 	documentationUrl = 'https://docs.unstract.com/unstract/index.html';
 	icon = 'file:llmWhisperer.svg' as const;
-	
+
 	properties: INodeProperties[] = [
 		{
 			displayName: 'HITL Key',

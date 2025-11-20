@@ -250,20 +250,29 @@ export class LlmWhisperer implements INodeType {
 					accept: 'application/json',
 				};
 
-				logger.info('Making API request to LLMWhisperer API...');
+				logger.info('[LLMWhisperer] Making API request to: ' + requestOptions.url);
+				logger.info('[LLMWhisperer] File: ' + binaryData.fileName + ' (' + fileBuffer.length + ' bytes)');
+
 				let result: any;
 				try {
 					result = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', requestOptions);
-				} catch (requestError) {
-					logger.error('Error during LLMWhisperer API request:', requestError);
+				} catch (requestError: any) {
+					logger.error('[LLMWhisperer] Error during API request: ' + requestError.message);
 					throw requestError;
 				}
 
-				if (result.status && result.status !== 202) {
-					throw new NodeOperationError(this.getNode(), result.body);
+				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+				const resultContent = typeof result === 'string' ? JSON.parse(result) : result;
+
+				logger.info('[LLMWhisperer] API Response: ' + JSON.stringify(resultContent));
+
+				if (!resultContent.whisper_hash) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Invalid API response: ${resultContent.message || JSON.stringify(resultContent)}`,
+					);
 				}
 
-				const resultContent = JSON.parse(result) as any;
 				const whisperHash = resultContent.whisper_hash;
 
 				let status = 'processing';
@@ -281,8 +290,10 @@ export class LlmWhisperer implements INodeType {
 						},
 					});
 
-					resultContentX = JSON.parse(statusResult);
+					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+					resultContentX = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
 					status = resultContentX.status;
+					logger.info('[LLMWhisperer] Status check: ' + status);
 
 					const currentTime = Date.now();
 					const elapsedSeconds = (currentTime - t1) / 1000;
@@ -313,7 +324,10 @@ export class LlmWhisperer implements INodeType {
 						},
 					});
 
-					const retrieveResultContent = JSON.parse(retrieveResult);
+					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+					const retrieveResultContent = typeof retrieveResult === 'string' ? JSON.parse(retrieveResult) : retrieveResult;
+					logger.info('[LLMWhisperer] Retrieved result successfully');
+
 					delete retrieveResultContent.metadata;
 					delete retrieveResultContent.webhook_metadata;
 					returnData.push({

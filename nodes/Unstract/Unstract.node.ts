@@ -137,37 +137,79 @@ export class Unstract implements INodeType {
 				const tags = this.getNodeParameter('tags', i) as string;
 				const useFileHistory = this.getNodeParameter('use_file_history', i) as boolean;
 
-				const formData: any = {
-					files: {
-						value: fileBuffer,
-						options: {
-							filename: binaryData.fileName,
-							contentType: binaryData.mimeType,
-						},
-					},
-					timeout: 1,
+				// Manual multipart/form-data construction (cloud-compatible, no external dependencies)
+				// Workaround for n8n issue #18271 where httpRequestWithAuthentication doesn't properly
+				// handle formData objects. See: https://github.com/n8n-io/n8n/issues/18271
+				const boundary = `----n8nFormBoundary${Date.now()}`;
+				const CRLF = '\r\n';
+
+				// Build multipart body parts
+				const parts: Buffer[] = [];
+
+				// File field
+				parts.push(Buffer.from(
+					`--${boundary}${CRLF}` +
+					`Content-Disposition: form-data; name="files"; filename="${binaryData.fileName}"${CRLF}` +
+					`Content-Type: ${binaryData.mimeType}${CRLF}${CRLF}`
+				));
+				parts.push(fileBuffer);
+				parts.push(Buffer.from(CRLF));
+
+				// Other fields
+				const fields = {
+					timeout: '1',
 					include_metrics: includeMetrics.toString(),
 					include_metadata: includeMetadata.toString(),
 					use_file_history: useFileHistory.toString(),
+					...(tags && { tags }),
 				};
 
-				if (tags) {
-					formData.tags = tags;
+				for (const [name, value] of Object.entries(fields)) {
+					if (value) {
+						parts.push(Buffer.from(
+							`--${boundary}${CRLF}` +
+							`Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+							`${value}${CRLF}`
+						));
+					}
 				}
 
-				const requestOptions = {
+				// Closing boundary
+				parts.push(Buffer.from(`--${boundary}--${CRLF}`));
+
+				// Combine all parts
+				const body = Buffer.concat(parts);
+
+				const requestOptions: any = {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
 					headers: {
 						'Authorization': `Bearer ${apiKey}`,
+						'Content-Type': `multipart/form-data; boundary=${boundary}`,
+						'Content-Length': body.length.toString(),
 					},
-					formData,
+					body,
 					timeout: 5 * 60 * 1000,
 				};
 
-				logger.info('Making API request to Unstract API...');
+				logger.info(`Making API request to: ${requestOptions.url}`);
+				logger.info(`File: ${binaryData.fileName} (${fileBuffer.length} bytes)`);
+				logger.info(`Request headers: ${JSON.stringify(requestOptions.headers)}`);
+
 				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
-				let resultContent = JSON.parse(result).message;
+				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+				const resultData = typeof result === 'string' ? JSON.parse(result) : result;
+
+				logger.info(`API Response: ${JSON.stringify(resultData)}`);
+
+				if (!resultData || !resultData.message) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Unexpected API response structure: ${JSON.stringify(resultData)}`,
+					);
+				}
+
+				let resultContent = resultData.message;
 				let executionStatus = resultContent.execution_status;
 
 				if (executionStatus === 'PENDING' || executionStatus === 'EXECUTING') {
@@ -177,7 +219,7 @@ export class Unstract implements INodeType {
 					while (executionStatus !== 'COMPLETED') {
 						await sleep(2000);
 
-						const statusRequestOptions = {
+						const statusRequestOptions: any = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
 							headers: {
@@ -185,19 +227,32 @@ export class Unstract implements INodeType {
 							},
 							timeout: 5 * 60 * 1000,
 						};
+						logger.info(`Status check URL: ${statusRequestOptions.url}`);
+						logger.info(`Status check method: ${statusRequestOptions.method}`);
+						logger.info(`Status check headers: ${JSON.stringify(statusRequestOptions.headers)}`);
+
 
 						try {
-							const statusResult = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', statusRequestOptions);
-							resultContent = JSON.parse(statusResult);
+							const statusResult = await helpers.httpRequest(statusRequestOptions);
+							resultContent = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
 							executionStatus = resultContent.status;
 						} catch (error: any) {
-							if (error.response && error.response.statusCode === 400) {
-								throw new NodeOperationError(this.getNode(), `Error: ${error}`);
+							// HTTP 422 indicates execution still in progress - this is expected
+							if (error.response?.status === 422 && error.response?.data) {
+								resultContent = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
+								executionStatus = resultContent.status;
+								logger.info(`Status check returned 422 (still executing): ${executionStatus}`);
+							} else {
+								// Actual error - log and rethrow
+								logger.error(`Status check failed: ${error.message}`);
+								if (error.response?.status) {
+									logger.error(`Status check response status: ${error.response.status}`);
+								}
+								throw new NodeOperationError(
+									this.getNode(),
+									`Failed to check execution status: ${error.message}`,
+								);
 							}
-							const jsonResponse = error.message.split(' - ')[1];
-							const cleanJson = jsonResponse.replace(/\\"/g, '"').slice(1, -1);
-							resultContent = JSON.parse(cleanJson);
-							executionStatus = resultContent.status;
 						}
 
 						const t2 = new Date();
@@ -223,6 +278,17 @@ export class Unstract implements INodeType {
 
 			return [returnData];
 		} catch (error: any) {
+			this.logger.error(`Error message: ${error.message}`);
+			this.logger.error(`Error name: ${error.name}`);
+			if (error.response?.data) {
+				this.logger.error(`Response data: ${JSON.stringify(error.response.data, null, 2)}`);
+			}
+			if (error.response?.status) {
+				this.logger.error(`Response status: ${error.response.status}`);
+			}
+			if (error.context?.data) {
+				this.logger.error(`Error context: ${JSON.stringify(error.context.data, null, 2)}`);
+			}
 			if (error.message) {
 				throw new NodeOperationError(this.getNode(), error.message);
 			}
