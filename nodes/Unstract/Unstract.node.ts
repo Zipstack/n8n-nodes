@@ -112,6 +112,7 @@ export class Unstract implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('unstractApi');
+			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
 			const { helpers, logger } = this;
 
@@ -157,6 +158,9 @@ export class Unstract implements INodeType {
 				const requestOptions = {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
+					headers: {
+						'Authorization': `Bearer ${apiKey}`,
+					},
 					formData,
 					timeout: 5 * 60 * 1000,
 				};
@@ -176,6 +180,9 @@ export class Unstract implements INodeType {
 						const statusRequestOptions = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
+							headers: {
+								'Authorization': `Bearer ${apiKey}`,
+							},
 							timeout: 5 * 60 * 1000,
 						};
 
