@@ -1,7 +1,6 @@
 import {
 	ICredentialType,
 	INodeProperties,
-	ICredentialTestRequest,
 	IAuthenticateGeneric,
 } from 'n8n-workflow';
 
@@ -31,17 +30,6 @@ export class LLMWhispererApi implements ICredentialType {
 			headers: {
 				'unstract-key': '={{$credentials.apiKey}}',
 			},
-		},
-	};
-
-	// Using external test endpoint to satisfy n8n verification requirements
-	// LLMWhisperer API does not provide a dedicated test connection endpoint
-	// httpbin.org/bearer accepts any Bearer token and returns success
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: 'https://httpbin.org',
-			url: '/bearer',
-			method: 'GET',
 		},
 	};
 }
