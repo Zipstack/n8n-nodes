@@ -195,7 +195,7 @@ export class LlmWhisperer implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		try {
-			const { helpers, logger } = this;
+			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
 				const fileContents = this.getNodeParameter('file_contents', i) as string;

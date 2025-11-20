@@ -116,7 +116,7 @@ export class UnstractHitlPush implements INodeType {
 			const credentials = await this.getCredentials('unstractApi');
 			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
-			const { helpers, logger } = this;
+			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
 				const binaryPropertyName = this.getNodeParameter('file_contents', i) as string;
