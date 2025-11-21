@@ -114,12 +114,13 @@ export class UnstractHitlPush implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('unstractApi');
+			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
-			const { helpers, logger } = this;
+			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
 				const binaryPropertyName = this.getNodeParameter('file_contents', i) as string;
-				
+
 				if (!items[i].binary?.[binaryPropertyName]) {
 					throw new NodeOperationError(this.getNode(), `No binary data property "${binaryPropertyName}" exists on input`);
 				}
@@ -136,62 +137,112 @@ export class UnstractHitlPush implements INodeType {
 				const useFileHistory = this.getNodeParameter('use_file_history', i) as boolean;
 				const hitlQueueName = this.getNodeParameter('hitl_queue_name', i) as string;
 
-				const formData: any = {
-					files: {
-						value: fileBuffer,
-						options: {
-							filename: binaryData.fileName,
-							contentType: binaryData.mimeType,
-						},
-					},
-					timeout: 1,
+				// Manual multipart/form-data construction (cloud-compatible, no external dependencies)
+				// Workaround for n8n issue #18271 where httpRequestWithAuthentication doesn't properly
+				// handle formData objects. See: https://github.com/n8n-io/n8n/issues/18271
+				const boundary = `----n8nFormBoundary${Date.now()}`;
+				const CRLF = '\r\n';
+
+				// Build multipart body parts
+				const parts: Buffer[] = [];
+
+				// File field
+				parts.push(Buffer.from(
+					`--${boundary}${CRLF}` +
+					`Content-Disposition: form-data; name="files"; filename="${binaryData.fileName}"${CRLF}` +
+					`Content-Type: ${binaryData.mimeType}${CRLF}${CRLF}`
+				));
+				parts.push(fileBuffer);
+				parts.push(Buffer.from(CRLF));
+
+				// Other fields
+				const fields = {
+					timeout: '1',
 					include_metrics: includeMetrics.toString(),
 					include_metadata: includeMetadata.toString(),
 					use_file_history: useFileHistory.toString(),
 					hitl_queue_name: hitlQueueName,
+					...(tags && { tags }),
 				};
 
-				if (tags) {
-					formData.tags = tags;
+				for (const [name, value] of Object.entries(fields)) {
+					if (value) {
+						parts.push(Buffer.from(
+							`--${boundary}${CRLF}` +
+							`Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+							`${value}${CRLF}`
+						));
+					}
 				}
 
-				const requestOptions = {
+				// Closing boundary
+				parts.push(Buffer.from(`--${boundary}--${CRLF}`));
+
+				// Combine all parts
+				const body = Buffer.concat(parts);
+
+				const requestOptions: any = {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
-					formData,
+					headers: {
+						'Authorization': `Bearer ${apiKey}`,
+						'Content-Type': `multipart/form-data; boundary=${boundary}`,
+						'Content-Length': body.length.toString(),
+					},
+					body,
 					timeout: 5 * 60 * 1000,
 				};
 
-				logger.info('[HITL] Sending file to Unstract HITL API...');
+
 				const result = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', requestOptions);
-				let resultContent = JSON.parse(result).message;
+				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+				const resultData = typeof result === 'string' ? JSON.parse(result) : result;
+
+
+				if (!resultData || !resultData.message) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Unexpected API response structure: ${JSON.stringify(resultData)}`,
+					);
+				}
+
+				let resultContent = resultData.message;
 				let executionStatus = resultContent.execution_status;
 
 				if (executionStatus === 'PENDING' || executionStatus === 'EXECUTING') {
-					const statusApi = resultContent.status_api;
 					const t1 = new Date();
+					const statusApi = resultContent.status_api;
 
 					while (executionStatus !== 'COMPLETED') {
 						await sleep(2000);
 
-						const pollRequest = {
+						const statusRequestOptions: any = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
+							headers: {
+								'Authorization': `Bearer ${apiKey}`,
+							},
 							timeout: 5 * 60 * 1000,
 						};
 
 						try {
-							const pollResult = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', pollRequest);
-							resultContent = JSON.parse(pollResult);
+							const statusResult = await helpers.httpRequest(statusRequestOptions);
+							resultContent = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
 							executionStatus = resultContent.status;
 						} catch (error: any) {
-							if (error.response && error.response.statusCode === 400) {
-								throw new NodeOperationError(this.getNode(), `Polling error: ${error}`);
+							// HTTP 422 indicates execution still in progress - this is expected
+							if (error.response?.status === 422 && error.response?.data) {
+								resultContent = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
+								executionStatus = resultContent.status;
+							} else {
+								// Actual error - log and rethrow
+								if (error.response?.status) {
+								}
+								throw new NodeOperationError(
+									this.getNode(),
+									`Failed to check execution status: ${error.message}`,
+								);
 							}
-							const json = error.message.split(' - ')[1];
-							const cleanJson = json.replace(/\\"/g, '"').slice(1, -1);
-							resultContent = JSON.parse(cleanJson);
-							executionStatus = resultContent.status;
 						}
 
 						const t2 = new Date();

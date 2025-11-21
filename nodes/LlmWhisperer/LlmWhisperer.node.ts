@@ -195,7 +195,7 @@ export class LlmWhisperer implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		try {
-			const { helpers, logger } = this;
+			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
 				const fileContents = this.getNodeParameter('file_contents', i) as string;
@@ -250,20 +250,25 @@ export class LlmWhisperer implements INodeType {
 					accept: 'application/json',
 				};
 
-				logger.info('Making API request to LLMWhisperer API...');
+
 				let result: any;
 				try {
 					result = await helpers.httpRequestWithAuthentication.call(this, 'llmWhispererApi', requestOptions);
-				} catch (requestError) {
-					logger.error('Error during LLMWhisperer API request:', requestError);
+				} catch (requestError: any) {
 					throw requestError;
 				}
 
-				if (result.status && result.status !== 202) {
-					throw new NodeOperationError(this.getNode(), result.body);
+				// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+				const resultContent = typeof result === 'string' ? JSON.parse(result) : result;
+
+
+				if (!resultContent.whisper_hash) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Invalid API response: ${resultContent.message || JSON.stringify(resultContent)}`,
+					);
 				}
 
-				const resultContent = JSON.parse(result) as any;
 				const whisperHash = resultContent.whisper_hash;
 
 				let status = 'processing';
@@ -281,7 +286,8 @@ export class LlmWhisperer implements INodeType {
 						},
 					});
 
-					resultContentX = JSON.parse(statusResult);
+					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+					resultContentX = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
 					status = resultContentX.status;
 
 					const currentTime = Date.now();
@@ -313,7 +319,9 @@ export class LlmWhisperer implements INodeType {
 						},
 					});
 
-					const retrieveResultContent = JSON.parse(retrieveResult);
+					// httpRequestWithAuthentication returns already-parsed JSON if Content-Type is application/json
+					const retrieveResultContent = typeof retrieveResult === 'string' ? JSON.parse(retrieveResult) : retrieveResult;
+
 					delete retrieveResultContent.metadata;
 					delete retrieveResultContent.webhook_metadata;
 					returnData.push({

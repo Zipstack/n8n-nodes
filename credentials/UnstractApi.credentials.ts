@@ -9,7 +9,7 @@ export class UnstractApi implements ICredentialType {
 	displayName = 'Unstract API';
 	documentationUrl = 'https://docs.unstract.com/unstract/index.html';
 	icon = 'file:llmWhisperer.svg' as const;
-	
+
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
@@ -36,7 +36,7 @@ export class UnstractApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'Authorization': '=Bearer apiKey',
+				'Authorization': '=Bearer {{$credentials.apiKey}}',
 			},
 		},
 	};
