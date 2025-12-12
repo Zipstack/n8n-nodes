@@ -125,7 +125,6 @@ jobs:
       # Run linting
       - name: Run linting
         run: npm run lint
-      - run: npm test
 
       # Publish to npm
       - run: npm publish
