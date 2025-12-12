@@ -15,7 +15,8 @@ export class UnstractHitlFetch implements INodeType {
 		icon: 'file:unstractHitlFetch.svg',
 		group: ['transform'],
 		version: 1,
-		description: 'Fetch final result from HITL queue using Unstract API',
+		usableAsTool: true,
+		description: 'Fetches approved documents from Unstract Human-in-the-Loop (HITL) queue after manual review',
 		defaults: {
 			name: 'Unstract HITL Fetch',
 		},
@@ -29,9 +30,48 @@ export class UnstractHitlFetch implements INodeType {
 		],
 		properties: [
 			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Document',
+						value: 'document',
+					},
+				],
+				default: 'document',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['document'],
+					},
+				},
+				options: [
+					{
+						name: 'Fetch Approved',
+						value: 'fetchApproved',
+						description: 'Fetch approved documents from HITL queue',
+						action: 'Fetch approved document from HITL',
+					},
+				],
+				default: 'fetchApproved',
+			},
+			{
 				displayName: 'Unstract Host',
 				name: 'host',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['fetchApproved'],
+					},
+				},
 				default: 'http://localhost:8000',
 				required: true,
 			},
@@ -39,6 +79,12 @@ export class UnstractHitlFetch implements INodeType {
 				displayName: 'Workflow ID',
 				name: 'workflow_id',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['fetchApproved'],
+					},
+				},
 				default: '',
 				required: true,
 			},
@@ -46,7 +92,15 @@ export class UnstractHitlFetch implements INodeType {
 				displayName: 'HITL Queue Name',
 				name: 'hitl_queue_name',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['fetchApproved'],
+					},
+				},
 				default: '',
+				required: true,
+				description: 'HITL queue name to filter results',
 			},
 		],
 	};
@@ -72,6 +126,7 @@ export class UnstractHitlFetch implements INodeType {
 			const options = {
 				method: 'GET' as IHttpRequestMethods,
 				url,
+				ignoreHttpStatusErrors: true,
 			};
 
 			try {
@@ -79,14 +134,10 @@ export class UnstractHitlFetch implements INodeType {
 				const parsed = typeof response === 'string' ? JSON.parse(response) : response;
 
 				if (parsed.error) {
-					if (parsed.error === 'No approved items available.') {
-						returnData.push({
-							json: { message: 'No approved items available', hasData: false },
-							pairedItem: { item: i }
-						});
-					} else {
-						throw new NodeOperationError(this.getNode(), `API Error: ${parsed.error}`);
-					}
+					returnData.push({
+						json: { error: parsed.error, hasData: false },
+						pairedItem: { item: i }
+					});
 				} else if (parsed.data) {
 					returnData.push({
 						json: { ...parsed.data, hasData: true },
@@ -96,6 +147,16 @@ export class UnstractHitlFetch implements INodeType {
 					throw new NodeOperationError(this.getNode(), 'Unexpected response format.');
 				}
 			} catch (error: any) {
+				if (this.continueOnFail()) {
+					returnData.push({
+						json: {
+							error: error.message || 'Unknown error occurred',
+						},
+						pairedItem: { item: i },
+					});
+					continue;
+				}
+
 				if (error.response && error.response.statusCode === 404) {
 					throw new NodeOperationError(this.getNode(), 'Result not yet available (404)');
 				}
