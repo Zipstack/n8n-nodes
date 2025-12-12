@@ -6,22 +6,8 @@ import {
 	NodeOperationError,
 	NodeConnectionType,
 	IHttpRequestMethods,
+	sleep,
 } from 'n8n-workflow';
-
-const sleep = (ms: number): Promise<void> =>
-	new Promise((resolve) => {
-		// Use Promise-based delay that doesn't rely on restricted globals
-		const start = Date.now();
-		const check = (): void => {
-			if (Date.now() - start >= ms) {
-				resolve();
-			} else {
-				// Use Promise.resolve() for non-blocking delay
-				Promise.resolve().then(check);
-			}
-		};
-		check();
-	});
 
 export class LlmWhisperer implements INodeType {
 	description: INodeTypeDescription = {
@@ -30,6 +16,7 @@ export class LlmWhisperer implements INodeType {
 		icon: 'file:llmWhisperer.svg',
 		group: ['transform'],
 		version: 1,
+		usableAsTool: true,
 		description: 'Extract text from PDFs, images, and scanned documents using OCR. Preserves layout and formatting for accurate text extraction from any document type',
 		subtitle: '={{$parameter["mode"] + " mode, " + $parameter["output_mode"] + " output"}}',
 		defaults: {
@@ -45,9 +32,48 @@ export class LlmWhisperer implements INodeType {
 		],
 		properties: [
 			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Document',
+						value: 'document',
+					},
+				],
+				default: 'document',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['document'],
+					},
+				},
+				options: [
+					{
+						name: 'Extract Text',
+						value: 'extractText',
+						description: 'Extract text from PDFs and images using OCR',
+						action: 'Extract text from document',
+					},
+				],
+				default: 'extractText',
+			},
+			{
 				displayName: 'File Contents',
 				name: 'file_contents',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['extractText'],
+					},
+				},
 				default: 'data',
 				description: 'The file contents to be processed',
 				required: true,
@@ -56,6 +82,12 @@ export class LlmWhisperer implements INodeType {
 				displayName: 'LLMWhisperer Host',
 				name: 'host',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['extractText'],
+					},
+				},
 				default: 'https://llmwhisperer-api.us-central.unstract.com',
 				description: 'Host URL for the LLMWhisperer API',
 				required: true,
@@ -64,6 +96,12 @@ export class LlmWhisperer implements INodeType {
 				displayName: 'Mode',
 				name: 'mode',
 				type: 'options',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['extractText'],
+					},
+				},
 				options: [
 					{
 						name: 'Form',
@@ -90,6 +128,12 @@ export class LlmWhisperer implements INodeType {
 				displayName: 'Output Mode',
 				name: 'output_mode',
 				type: 'options',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['extractText'],
+					},
+				},
 				options: [
 					{
 						name: 'Layout Preserving',
@@ -105,87 +149,100 @@ export class LlmWhisperer implements INodeType {
 				required: true,
 			},
 			{
-				displayName: 'Timeout',
-				name: 'timeout',
-				type: 'number',
-				default: 300,
-				description: 'Timeout in seconds for the API request',
-			},
-			{
-				displayName: 'Page Separator',
-				name: 'page_seperator',
-				type: 'string',
-				default: '<<<',
-				description: 'The string to be used as a page separator',
-			},
-			{
-				displayName: 'Pages to Extract',
-				name: 'pages_to_extract',
-				type: 'string',
-				default: '',
-				description:
-					'Define which pages to extract. Example: 1-5,7,21- will extract pages 1,2,3,4,5,7,21,22,23,24... till the last page',
-			},
-			{
-				displayName: 'Line Splitter Tolerance',
-				name: 'line_splitter_tolerance',
-				type: 'number',
-				typeOptions: {
-					minValue: 0,
-					maxValue: 1,
+				displayName: 'Additional Options',
+				name: 'additionalOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['extractText'],
+					},
 				},
-				default: 0.4,
-				description:
-					'Factor to decide when to move text to the next line (40% of average character height)',
-			},
-			{
-				displayName: 'Line Splitter Strategy',
-				name: 'line_splitter_strategy',
-				type: 'string',
-				default: 'left-priority',
-				description: 'The line splitter strategy to use. Advanced option for customizing line splitting.',
-			},
-			{
-				displayName: 'Horizontal Stretch Factor',
-				name: 'horizontal_stretch_factor',
-				type: 'number',
-				default: 1.0,
-				description: 'Factor for horizontal stretch. 1.1 means 10% stretch.',
-			},
-			{
-				displayName: 'Mark Vertical Lines',
-				name: 'mark_vertical_lines',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to reproduce vertical lines in the document. Not applicable if mode=native_text.',
-			},
-			{
-				displayName: 'Mark Horizontal Lines',
-				name: 'mark_horizontal_lines',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to reproduce horizontal lines. Not applicable if mode=native_text, requires mark_vertical_lines=true.',
-			},
-			{
-				displayName: 'Tag',
-				name: 'tag',
-				type: 'string',
-				default: 'default',
-				description: 'Auditing feature. Value associated with API invocation for usage reports.',
-			},
-			{
-				displayName: 'File Name',
-				name: 'file_name',
-				type: 'string',
-				default: '',
-				description: 'Auditing feature. Value associated with API invocation for usage reports.',
-			},
-			{
-				displayName: 'Add Line Numbers',
-				name: 'add_line_nos',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to add line numbers to extracted text and save line metadata for highlights API',
+				default: {},
+				options: [
+					{
+						displayName: 'Add Line Numbers',
+						name: 'add_line_nos',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to add line numbers to extracted text and save line metadata for highlights API',
+					},
+					{
+						displayName: 'File Name',
+						name: 'file_name',
+						type: 'string',
+						default: '',
+						description: 'Auditing feature. Value associated with API invocation for usage reports.',
+					},
+					{
+						displayName: 'Horizontal Stretch Factor',
+						name: 'horizontal_stretch_factor',
+						type: 'number',
+						default: 1.0,
+						description: 'Factor for horizontal stretch. 1.1 means 10% stretch.',
+					},
+					{
+						displayName: 'Line Splitter Strategy',
+						name: 'line_splitter_strategy',
+						type: 'string',
+						default: 'left-priority',
+						description: 'The line splitter strategy to use. Advanced option for customizing line splitting.',
+					},
+					{
+						displayName: 'Line Splitter Tolerance',
+						name: 'line_splitter_tolerance',
+						type: 'number',
+						typeOptions: {
+							minValue: 0,
+							maxValue: 1,
+						},
+						default: 0.4,
+						description: 'Factor to decide when to move text to the next line (40% of average character height)',
+					},
+					{
+						displayName: 'Mark Horizontal Lines',
+						name: 'mark_horizontal_lines',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to reproduce horizontal lines. Not applicable if mode=native_text, requires mark_vertical_lines=true.',
+					},
+					{
+						displayName: 'Mark Vertical Lines',
+						name: 'mark_vertical_lines',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to reproduce vertical lines in the document. Not applicable if mode=native_text.',
+					},
+					{
+						displayName: 'Page Separator',
+						name: 'page_seperator',
+						type: 'string',
+						default: '<<<',
+						description: 'The string to be used as a page separator',
+					},
+					{
+						displayName: 'Pages to Extract',
+						name: 'pages_to_extract',
+						type: 'string',
+						default: '',
+						description: 'Define which pages to extract. Example: 1-5,7,21- will extract pages 1,2,3,4,5,7,21,22,23,24... till the last page',
+					},
+					{
+						displayName: 'Tag',
+						name: 'tag',
+						type: 'string',
+						default: 'default',
+						description: 'Auditing feature. Value associated with API invocation for usage reports.',
+					},
+					{
+						displayName: 'Timeout',
+						name: 'timeout',
+						type: 'number',
+						default: 300,
+						description: 'Timeout in seconds for the API request',
+					},
+				],
 			},
 		],
 	};
@@ -198,7 +255,8 @@ export class LlmWhisperer implements INodeType {
 			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
-				const fileContents = this.getNodeParameter('file_contents', i) as string;
+				try {
+					const fileContents = this.getNodeParameter('file_contents', i) as string;
 
 				if (!items[i].binary?.[fileContents]) {
 					throw new NodeOperationError(
@@ -213,17 +271,20 @@ export class LlmWhisperer implements INodeType {
 				const host = this.getNodeParameter('host', i) as string;
 				const mode = this.getNodeParameter('mode', i) as string;
 				const outputMode = this.getNodeParameter('output_mode', i) as string;
-				const pageSeparator = this.getNodeParameter('page_seperator', i) as string;
-				const pagesToExtract = this.getNodeParameter('pages_to_extract', i) as string;
-				const lineSplitterTolerance = this.getNodeParameter('line_splitter_tolerance', i) as number;
-				const lineSplitterStrategy = this.getNodeParameter('line_splitter_strategy', i) as string;
-				const horizontalStretchFactor = this.getNodeParameter('horizontal_stretch_factor', i) as number;
-				const markVerticalLines = this.getNodeParameter('mark_vertical_lines', i) as boolean;
-				const markHorizontalLines = this.getNodeParameter('mark_horizontal_lines', i) as boolean;
-				const tag = this.getNodeParameter('tag', i) as string;
-				const fileName = this.getNodeParameter('file_name', i) as string;
-				const addLineNumbers = this.getNodeParameter('add_line_nos', i) as boolean;
-				const timeout = this.getNodeParameter('timeout', i) as number;
+
+				// Get additional options with defaults
+				const additionalOptions = this.getNodeParameter('additionalOptions', i, {}) as any;
+				const pageSeparator = additionalOptions.page_seperator !== undefined ? additionalOptions.page_seperator : '<<<';
+				const pagesToExtract = additionalOptions.pages_to_extract || '';
+				const lineSplitterTolerance = additionalOptions.line_splitter_tolerance !== undefined ? additionalOptions.line_splitter_tolerance : 0.4;
+				const lineSplitterStrategy = additionalOptions.line_splitter_strategy || 'left-priority';
+				const horizontalStretchFactor = additionalOptions.horizontal_stretch_factor !== undefined ? additionalOptions.horizontal_stretch_factor : 1.0;
+				const markVerticalLines = additionalOptions.mark_vertical_lines !== undefined ? additionalOptions.mark_vertical_lines : false;
+				const markHorizontalLines = additionalOptions.mark_horizontal_lines !== undefined ? additionalOptions.mark_horizontal_lines : false;
+				const tag = additionalOptions.tag || 'default';
+				const fileName = additionalOptions.file_name || '';
+				const addLineNumbers = additionalOptions.add_line_nos !== undefined ? additionalOptions.add_line_nos : false;
+				const timeout = additionalOptions.timeout !== undefined ? additionalOptions.timeout : 300;
 
 				const requestOptions = {
 					method: 'POST' as IHttpRequestMethods,
@@ -328,6 +389,22 @@ export class LlmWhisperer implements INodeType {
 						json: retrieveResultContent,
 						pairedItem: { item: i },
 					});
+				}
+				} catch (error: any) {
+					if (this.continueOnFail()) {
+						returnData.push({
+							json: {
+								error: error.message || 'Unknown error occurred',
+							},
+							pairedItem: { item: i },
+						});
+						continue;
+					}
+
+					if (error.message) {
+						throw new NodeOperationError(this.getNode(), error.message);
+					}
+					throw error;
 				}
 			}
 

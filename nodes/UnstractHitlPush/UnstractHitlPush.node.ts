@@ -6,22 +6,8 @@ import {
 	NodeOperationError,
 	NodeConnectionType,
 	IHttpRequestMethods,
+	sleep,
 } from 'n8n-workflow';
-
-const sleep = (ms: number): Promise<void> =>
-	new Promise((resolve) => {
-		// Use Promise-based delay that doesn't rely on restricted globals
-		const start = Date.now();
-		const check = (): void => {
-			if (Date.now() - start >= ms) {
-				resolve();
-			} else {
-				// Use Promise.resolve() for non-blocking delay
-				Promise.resolve().then(check);
-			}
-		};
-		check();
-	});
 
 export class UnstractHitlPush implements INodeType {
 	description: INodeTypeDescription = {
@@ -30,6 +16,7 @@ export class UnstractHitlPush implements INodeType {
 		icon: 'file:unstractHitlPush.svg',
 		group: ['transform'],
 		version: 1,
+		usableAsTool: true,
 		description: 'Push document for HITL processing using Unstract API',
 		defaults: {
 			name: 'Unstract HITL Push',
@@ -44,9 +31,48 @@ export class UnstractHitlPush implements INodeType {
 		],
 		properties: [
 			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Document',
+						value: 'document',
+					},
+				],
+				default: 'document',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['document'],
+					},
+				},
+				options: [
+					{
+						name: 'Push to HITL',
+						value: 'push',
+						description: 'Push document for Human-in-the-Loop processing',
+						action: 'Push document to HITL queue',
+					},
+				],
+				default: 'push',
+			},
+			{
 				displayName: 'File Contents',
 				name: 'file_contents',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
 				default: 'data',
 				description: 'Name of the binary property containing file data',
 				required: true,
@@ -55,6 +81,12 @@ export class UnstractHitlPush implements INodeType {
 				displayName: 'Unstract Host',
 				name: 'host',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
 				default: 'https://us-central.unstract.com',
 				required: true,
 			},
@@ -62,6 +94,12 @@ export class UnstractHitlPush implements INodeType {
 				displayName: 'API Deployment Name',
 				name: 'deployment_name',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
 				default: '',
 				required: true,
 			},
@@ -69,6 +107,12 @@ export class UnstractHitlPush implements INodeType {
 				displayName: 'HITL Queue Name',
 				name: 'hitl_queue_name',
 				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
 				default: '',
 				required: true,
 			},
@@ -76,34 +120,58 @@ export class UnstractHitlPush implements INodeType {
 				displayName: 'Timeout',
 				name: 'timeout',
 				type: 'number',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
 				default: 600,
 				description: 'Max seconds to wait for processing',
 				required: true,
 			},
 			{
-				displayName: 'Include Metrics',
-				name: 'include_metrics',
-				type: 'boolean',
-				default: true,
-			},
-			{
-				displayName: 'Include Metadata',
-				name: 'include_metadata',
-				type: 'boolean',
-				default: true,
-			},
-			{
-				displayName: 'Tags',
-				name: 'tags',
-				type: 'string',
-				default: '',
-				description: 'Comma-separated tags for the document',
-			},
-			{
-				displayName: 'Use Cached Results',
-				name: 'use_file_history',
-				type: 'boolean',
-				default: false,
+				displayName: 'Additional Options',
+				name: 'additionalOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				displayOptions: {
+					show: {
+						resource: ['document'],
+						operation: ['push'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Include Metadata',
+						name: 'include_metadata',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to include document metadata in the response',
+					},
+					{
+						displayName: 'Include Metrics',
+						name: 'include_metrics',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to include processing metrics in the response',
+					},
+					{
+						displayName: 'Tags',
+						name: 'tags',
+						type: 'string',
+						default: '',
+						description: 'Comma-separated tags for the document',
+					},
+					{
+						displayName: 'Use Cached Results',
+						name: 'use_file_history',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to use cached results if available',
+					},
+				],
 			},
 		],
 	};
@@ -114,12 +182,12 @@ export class UnstractHitlPush implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('unstractApi');
-			const apiKey = credentials.apiKey as string;
 			const orgId = credentials.orgId as string;
 			const { helpers } = this;
 
 			for (let i = 0; i < items.length; i++) {
-				const binaryPropertyName = this.getNodeParameter('file_contents', i) as string;
+				try {
+					const binaryPropertyName = this.getNodeParameter('file_contents', i) as string;
 
 				if (!items[i].binary?.[binaryPropertyName]) {
 					throw new NodeOperationError(this.getNode(), `No binary data property "${binaryPropertyName}" exists on input`);
@@ -131,11 +199,14 @@ export class UnstractHitlPush implements INodeType {
 				const timeout = this.getNodeParameter('timeout', i) as number;
 				const deploymentName = this.getNodeParameter('deployment_name', i) as string;
 				const host = this.getNodeParameter('host', i) as string;
-				const includeMetrics = this.getNodeParameter('include_metrics', i) as boolean;
-				const includeMetadata = this.getNodeParameter('include_metadata', i) as boolean;
-				const tags = this.getNodeParameter('tags', i) as string;
-				const useFileHistory = this.getNodeParameter('use_file_history', i) as boolean;
 				const hitlQueueName = this.getNodeParameter('hitl_queue_name', i) as string;
+
+				// Get additional options with defaults
+				const additionalOptions = this.getNodeParameter('additionalOptions', i, {}) as any;
+				const includeMetrics = additionalOptions.include_metrics !== undefined ? additionalOptions.include_metrics : true;
+				const includeMetadata = additionalOptions.include_metadata !== undefined ? additionalOptions.include_metadata : true;
+				const tags = additionalOptions.tags || '';
+				const useFileHistory = additionalOptions.use_file_history !== undefined ? additionalOptions.use_file_history : false;
 
 				// Manual multipart/form-data construction (cloud-compatible, no external dependencies)
 				// Workaround for n8n issue #18271 where httpRequestWithAuthentication doesn't properly
@@ -185,7 +256,6 @@ export class UnstractHitlPush implements INodeType {
 					method: 'POST' as IHttpRequestMethods,
 					url: `${host}/deployment/api/${orgId}/${deploymentName}/`,
 					headers: {
-						'Authorization': `Bearer ${apiKey}`,
 						'Content-Type': `multipart/form-data; boundary=${boundary}`,
 						'Content-Length': body.length.toString(),
 					},
@@ -219,30 +289,28 @@ export class UnstractHitlPush implements INodeType {
 						const statusRequestOptions: any = {
 							method: 'GET' as IHttpRequestMethods,
 							url: `${host}${statusApi}`,
-							headers: {
-								'Authorization': `Bearer ${apiKey}`,
-							},
 							timeout: 5 * 60 * 1000,
+							returnFullResponse: true,
+							ignoreHttpStatusErrors: true,
 						};
 
-						try {
-							const statusResult = await helpers.httpRequest(statusRequestOptions);
-							resultContent = typeof statusResult === 'string' ? JSON.parse(statusResult) : statusResult;
-							executionStatus = resultContent.status;
-						} catch (error: any) {
-							// HTTP 422 indicates execution still in progress - this is expected
-							if (error.response?.status === 422 && error.response?.data) {
-								resultContent = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
-								executionStatus = resultContent.status;
-							} else {
-								// Actual error - log and rethrow
-								if (error.response?.status) {
-								}
-								throw new NodeOperationError(
-									this.getNode(),
-									`Failed to check execution status: ${error.message}`,
-								);
-							}
+						const statusResult = await helpers.httpRequestWithAuthentication.call(this, 'unstractApi', statusRequestOptions);
+						const statusCode = statusResult.statusCode || 200;
+						const body = statusResult.body || statusResult;
+						resultContent = typeof body === 'string' ? JSON.parse(body) : body;
+						executionStatus = resultContent.status;
+
+						// HTTP 422 indicates execution still in progress - continue polling
+						if (statusCode === 422) {
+							continue;
+						}
+
+						// Handle other error status codes
+						if (statusCode >= 400 && statusCode !== 422) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Failed to check execution status: HTTP ${statusCode}`,
+							);
 						}
 
 						const t2 = new Date();
@@ -264,6 +332,22 @@ export class UnstractHitlPush implements INodeType {
 					json: resultContent,
 					pairedItem: { item: i }
 				});
+				} catch (error: any) {
+					if (this.continueOnFail()) {
+						returnData.push({
+							json: {
+								error: error.message || 'Unknown error occurred',
+							},
+							pairedItem: { item: i },
+						});
+						continue;
+					}
+
+					if (error.message) {
+						throw new NodeOperationError(this.getNode(), error.message);
+					}
+					throw error;
+				}
 			}
 
 			return [returnData];
