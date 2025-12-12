@@ -5,23 +5,27 @@ on:
   workflow_dispatch:
     inputs:
       version_bump:
-        description: "Version bump type"
+        description: 'Version bump type'
         required: true
-        default: "patch"
+        default: 'patch'
         type: choice
         options:
           - patch
           - minor
           - major
       pre_release:
-        description: "Create as pre-release"
+        description: 'Create as pre-release'
         required: false
         default: false
         type: boolean
       release_notes:
-        description: "Release notes (optional)"
+        description: 'Release notes (optional)'
         required: false
         type: string
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
 
 jobs:
   release-and-publish:
@@ -54,8 +58,8 @@ jobs:
       # Setup Node.js
       - uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
-          registry-url: "https://registry.npmjs.org"
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
 
       # Install dependencies
       - name: Install dependencies
@@ -112,19 +116,19 @@ jobs:
             exit 1
           fi
 
+      - name: Update npm
+        run: npm install -g npm@latest
       # Build the package
-      - name: Build package
-        run: npm run build
+      - run: npm ci
+      - run: npm run build --if-present
 
       # Run linting
       - name: Run linting
         run: npm run lint
+      - run: npm test
 
       # Publish to npm
-      - name: Publish to NPM
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+      - run: npm publish
 
       # Output success message
       - name: Success message
