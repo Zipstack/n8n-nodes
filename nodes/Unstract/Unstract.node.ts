@@ -4,7 +4,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
-	NodeConnectionType,
 	IHttpRequestMethods,
 	sleep,
 } from 'n8n-workflow';
@@ -21,8 +20,8 @@ export class Unstract implements INodeType {
 		defaults: {
 			name: 'Unstract',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'unstractApi',

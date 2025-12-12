@@ -4,7 +4,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
-	NodeConnectionType,
 	IHttpRequestMethods,
 	sleep,
 } from 'n8n-workflow';
@@ -22,8 +21,8 @@ export class LlmWhisperer implements INodeType {
 		defaults: {
 			name: 'LLMWhisperer',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'llmWhispererApi',

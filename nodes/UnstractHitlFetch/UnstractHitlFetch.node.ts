@@ -4,7 +4,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
-	NodeConnectionType,
 	IHttpRequestMethods,
 } from 'n8n-workflow';
 
@@ -20,8 +19,8 @@ export class UnstractHitlFetch implements INodeType {
 		defaults: {
 			name: 'Unstract HITL Fetch',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'unstractHITLApi',
