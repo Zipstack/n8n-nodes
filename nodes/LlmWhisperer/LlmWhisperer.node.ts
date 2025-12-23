@@ -264,8 +264,7 @@ export class LlmWhisperer implements INodeType {
 					);
 				}
 
-				const binaryData = items[i].binary![fileContents];
-				const fileBuffer = Buffer.from(binaryData.data, 'base64');
+				const fileBuffer = await this.helpers.getBinaryDataBuffer(i, fileContents);
 
 				const host = this.getNodeParameter('host', i) as string;
 				const mode = this.getNodeParameter('mode', i) as string;
@@ -307,7 +306,6 @@ export class LlmWhisperer implements INodeType {
 						file_name: fileName,
 						add_line_nos: addLineNumbers,
 					},
-					accept: 'application/json',
 				};
 
 
