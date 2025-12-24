@@ -193,7 +193,7 @@ export class UnstractHitlPush implements INodeType {
 				}
 
 				const binaryData = items[i].binary![binaryPropertyName];
-				const fileBuffer = Buffer.from(binaryData.data, 'base64');
+				const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
 
 				const timeout = this.getNodeParameter('timeout', i) as number;
 				const deploymentName = this.getNodeParameter('deployment_name', i) as string;
