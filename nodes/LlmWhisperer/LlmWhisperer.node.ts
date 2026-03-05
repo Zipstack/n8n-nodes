@@ -10,7 +10,7 @@ import {
 
 export class LlmWhisperer implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'LLMWhisperer',
+		displayName: 'LLMWhisperer OCR',
 		name: 'llmWhisperer',
 		icon: 'file:llmWhisperer.svg',
 		group: ['transform'],
@@ -19,7 +19,7 @@ export class LlmWhisperer implements INodeType {
 		description: 'Extract text from PDFs, images, and scanned documents using OCR. Preserves layout and formatting for accurate text extraction from any document type',
 		subtitle: '={{$parameter["mode"] + " mode, " + $parameter["output_mode"] + " output"}}',
 		defaults: {
-			name: 'LLMWhisperer',
+			name: 'LLMWhisperer OCR',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
